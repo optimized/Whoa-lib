@@ -3,38 +3,60 @@
 --   Usage:  local UI = loadstring(game:HttpGet("YOUR_RAW_URL"))()
 -- ══════════════════════════════════════════════════════════
 
--- ── KEY SYSTEM CONFIG ─────────────────────────────────────
-local KEY_ENABLED  = true               -- set false to skip key check entirely
-local KEY_VALUE    = "woah67"           -- the correct key (lowercase)
-local KEY_URL      = "https://discord.gg/Q9xJ5s5RFg"  -- shown on "Get Key" button
-local KEY_FILE     = "WhoaKey.txt"      -- file to save valid key so user only types once
--- ─────────────────────────────────────────────────────────
+-- ┌─────────────────────────────────────────────────────────┐
+-- │                   KEY SYSTEM CONFIG                      │
+-- │  KEY_ENABLED  →  true  = key prompt shown               │
+-- │                  false = no prompt, loads instantly      │
+-- │  KEY_VALUES   →  add as many keys as you want           │
+-- │  KEY_URL      →  link copied when user clicks "Get Key" │
+-- │  KEY_FILE     →  file to cache valid key locally        │
+-- └─────────────────────────────────────────────────────────┘
+local KEY_ENABLED = true
+local KEY_VALUES  = {
+    "woah67",        -- key 1
+    -- "key2here",   -- add more keys by uncommenting/adding lines
+    -- "key3here",
+}
+local KEY_URL  = "https://discord.gg/Q9xJ5s5RFg"
+local KEY_FILE = "WhoaKey.txt"
 
--- ── SCRIPT DEFAULTS (overridable by dev after loading) ───
+-- ┌─────────────────────────────────────────────────────────┐
+-- │                   SCRIPT DEFAULTS                        │
+-- │  These are the defaults. Override after loading if       │
+-- │  needed, or just edit them here directly.                │
+-- └─────────────────────────────────────────────────────────┘
 local SCRIPT_NAME    = "whoa"
-local SCRIPT_VERSION = "v1.0"
-local ICON_IMAGE     = "rbxassetid://134387754737125"
-local WM_SHOW        = true
-local WM_SUBTEXT     = ""
+local SCRIPT_VERSION = "v2.0"
+local ICON_IMAGE     = "rbxassetid://134387754737125"  -- set "" for letter icon
+local WM_SHOW        = true         -- show watermark on load
+local WM_SUBTEXT     = ""           -- optional extra text in watermark
 local WIN_WIDTH      = 700
 local WIN_HEIGHT     = 500
 local TOGGLE_KEY     = Enum.KeyCode.RightShift
-local SNOW_ENABLED   = false
-local NOTIF_DURATION = 3
+local SNOW_ENABLED   = false        -- snow on by default
+local NOTIF_DURATION = 3            -- default notification duration (seconds)
 
--- ── THEME ─────────────────────────────────────────────────
+-- ┌─────────────────────────────────────────────────────────┐
+-- │                      THEME                              │
+-- │  Edit any color here to retheme the entire UI.          │
+-- └─────────────────────────────────────────────────────────┘
 local T = {
-    A  = Color3.fromRGB(255, 182, 215),  -- primary accent
-    A2 = Color3.fromRGB(255, 150, 195),  -- window border
-    B0 = Color3.fromRGB(9,   9,  13),    -- darkest bg
-    B1 = Color3.fromRGB(14,  14, 19),    -- window bg
-    B2 = Color3.fromRGB(20,  20, 27),    -- element bg
-    B3 = Color3.fromRGB(26,  26, 35),    -- section bg
-    B4 = Color3.fromRGB(34,  34, 46),    -- hovered
-    BD = Color3.fromRGB(52,  52, 70),    -- border
-    TX = Color3.fromRGB(255, 255, 255),  -- main text
-    MT = Color3.fromRGB(115, 115, 145),  -- muted text
+    A  = Color3.fromRGB(255, 182, 215),   -- primary accent
+    A2 = Color3.fromRGB(255, 150, 195),   -- window border
+    B0 = Color3.fromRGB(9,   9,  13),     -- darkest bg
+    B1 = Color3.fromRGB(14,  14, 19),     -- window bg
+    B2 = Color3.fromRGB(20,  20, 27),     -- element bg
+    B3 = Color3.fromRGB(26,  26, 35),     -- section bg
+    B4 = Color3.fromRGB(34,  34, 46),     -- hovered
+    BD = Color3.fromRGB(52,  52, 70),     -- border
+    TX = Color3.fromRGB(255, 255, 255),   -- main text
+    MT = Color3.fromRGB(115, 115, 145),   -- muted text
 }
+
+-- ══════════════════════════════════════════════════════════
+--  INTERNALS — do not edit below unless you know what
+--  you are doing
+-- ══════════════════════════════════════════════════════════
 
 local Players = game:GetService("Players")
 local TS      = game:GetService("TweenService")
@@ -174,13 +196,16 @@ end)
 if not SG.Parent then SG.Parent = LP.PlayerGui end
 
 -- ── KEY SYSTEM ────────────────────────────────────────────
-local unlocked = not KEY_ENABLED  -- if disabled, skip straight to true
+local unlocked = not KEY_ENABLED
 
 if KEY_ENABLED then
+    -- check cached key file first so returning users skip the prompt
     if isfile and isfile(KEY_FILE) then
         pcall(function()
             local k = readfile(KEY_FILE):gsub("%s",""):lower()
-            if k == KEY_VALUE then unlocked = true end
+            for _, v in ipairs(KEY_VALUES) do
+                if k == v:lower() then unlocked = true; break end
+            end
         end)
     end
 
@@ -204,7 +229,11 @@ if KEY_ENABLED then
         getBtn.MouseButton1Click:Connect(function() pcall(function() if setclipboard then setclipboard(KEY_URL) end end) end)
         local function tryKey()
             local k = ki.Text:gsub("%s",""):lower()
-            if k == KEY_VALUE then
+            local valid = false
+            for _, v in ipairs(KEY_VALUES) do
+                if k == v:lower() then valid = true; break end
+            end
+            if valid then
                 pcall(function() if writefile then writefile(KEY_FILE, k) end end)
                 tw(ov,{BackgroundTransparency=1},0.3); tw(md,{BackgroundTransparency=1},0.3)
                 task.delay(0.3,function() ov:Destroy() end); unlocked=true
@@ -233,7 +262,7 @@ local function Notify(title, body, ntype, dur)
     tl({Position=UDim2.new(0,12,0,29),Size=UDim2.new(1,-16,0,22),BackgroundTransparency=1,Text=body,TextColor3=T.TX,Font=Enum.Font.FredokaOne,TextSize=12,TextXAlignment=Enum.TextXAlignment.Left,TextWrapped=true,ZIndex=1000},nf)
     nf.Position = UDim2.new(1.1,0,0,0)
     tw(nf,{Position=UDim2.new(0,0,0,0)},0.25,Enum.EasingStyle.Back)
-    task.delay(dur or 3,function() tw(nf,{Position=UDim2.new(1.1,0,0,0)},0.2); task.delay(0.25,function() nf:Destroy() end) end)
+    task.delay(dur or NOTIF_DURATION,function() tw(nf,{Position=UDim2.new(1.1,0,0,0)},0.2); task.delay(0.25,function() nf:Destroy() end) end)
 end
 
 -- ── WINDOW ────────────────────────────────────────────────
@@ -704,36 +733,29 @@ tl({Size=UDim2.new(0,0,0,18),AutomaticSize=Enum.AutomaticSize.X,BackgroundTransp
 local wvBg=new("Frame",{Size=UDim2.new(0,0,0,18),AutomaticSize=Enum.AutomaticSize.X,BackgroundColor3=T.B3,LayoutOrder=3,ZIndex=101},wmFrame); cr(4,wvBg); st(T.BD,1,wvBg); pad(0,0,5,5,wvBg)
 local wmVLabel=tl({Size=UDim2.new(0,0,1,0),AutomaticSize=Enum.AutomaticSize.X,BackgroundTransparency=1,Text=SCRIPT_VERSION,TextColor3=T.A,Font=Enum.Font.GothamBold,TextSize=10,ZIndex=102},wvBg); table.insert(AL,function(c) wmVLabel.TextColor3=c end)
 new("Frame",{Size=UDim2.new(0,1,0,16),BackgroundColor3=T.BD,LayoutOrder=4,ZIndex=101},wmFrame)
-local wmNameLabel=tl({Size=UDim2.new(0,0,0,16),AutomaticSize=Enum.AutomaticSize.X,BackgroundTransparency=1,Text=LP.Name,TextColor3=T.MT,Font=Enum.Font.Gotham,TextSize=11,LayoutOrder=5,ZIndex=101},wmFrame); wmNameLabel.Visible=false
+local wmNameLabel=tl({Size=UDim2.new(0,0,0,16),AutomaticSize=Enum.AutomaticSize.X,BackgroundTransparency=1,Text=LP.Name,TextColor3=T.MT,Font=Enum.Font.Gotham,TextSize=11,LayoutOrder=5,ZIndex=101},wmFrame)
 if WM_SUBTEXT and WM_SUBTEXT~="" then
     new("Frame",{Size=UDim2.new(0,1,0,16),BackgroundColor3=T.BD,LayoutOrder=6,ZIndex=101},wmFrame)
     tl({Size=UDim2.new(0,0,0,16),AutomaticSize=Enum.AutomaticSize.X,BackgroundTransparency=1,Text=WM_SUBTEXT,TextColor3=Color3.fromRGB(130,100,120),Font=Enum.Font.Gotham,TextSize=10,LayoutOrder=7,ZIndex=101},wmFrame)
 end
 
 -- ══════════════════════════════════════════════════════════
---   PUBLIC API — returned to the developer's script
+--   PUBLIC API
 -- ══════════════════════════════════════════════════════════
 return {
-    -- Core builders
     AddTab      = addTab,
     MakeSection = makeSection,
-
-    -- Utilities
     Notify      = Notify,
     SetAccent   = setA,
     StartSnow   = startSnow,
     StopSnow    = stopSnow,
     Flags       = Flags,
-
-    -- Exposed UI refs (for anon mode etc)
     pbNameLabel = pbNameLabel,
     avImg       = avImg,
     wmFrame     = wmFrame,
     wmNameLabel = wmNameLabel,
     realAvatar  = function() return realAvatar end,
-
-    -- Cleanup
-    Destroy = function()
+    Destroy     = function()
         pcall(stopSnow)
         pcall(function() SG:Destroy() end)
     end,
