@@ -1,5 +1,5 @@
 -- ══════════════════════════════════════════════════════════
---   WhoaUI v2.0 — Loadstring Library
+--   WhoaUI v2.1 — Loadstring Library
 --   Usage:  local UI = loadstring(game:HttpGet("YOUR_RAW_URL"))()
 --           UI.Setup({ Keys={"mykey"}, KeyURL="...", ... })
 -- ══════════════════════════════════════════════════════════
@@ -7,6 +7,7 @@
 local KEY_VALUES  = {}
 local KEY_URL     = ""
 local KEY_FILE    = "WhoaKey.txt"
+local KEY_PERSIST = true   -- true = cache key (1-time), false = ask every run
 local SCRIPT_NAME    = "script"
 local SCRIPT_VERSION = "v1.0"
 local ICON_IMAGE     = ""
@@ -81,11 +82,6 @@ local function getCfgList()
     local ok,d=pcall(function() return HS:JSONDecode(readfile(CFG_INDEX)) end)
     return (ok and type(d)=="table") and d or {}
 end
-local function _addToCfgList(name)
-    local list=getCfgList()
-    for _,v in ipairs(list) do if v==name then return end end
-    table.insert(list,name); pcall(function() writefile(CFG_INDEX,HS:JSONEncode(list)) end)
-end
 local function saveConfig()
     if not writefile then return end
     pcall(function() writefile(CFG_FILE,HS:JSONEncode(_encodeFlags())) end)
@@ -131,6 +127,13 @@ local function hexToColor(hex)
 end
 local function colorToHex(c) return string.format("%02X%02X%02X",math.round(c.R*255),math.round(c.G*255),math.round(c.B*255)) end
 
+-- Scale helper: returns a scale factor based on shortest viewport edge
+local function getScale()
+    local vp = workspace.CurrentCamera.ViewportSize
+    local s = math.min(vp.X / WIN_WIDTH, vp.Y / WIN_HEIGHT)
+    return math.clamp(s, 0.45, 1)
+end
+
 local SG=new("ScreenGui",{Name="WhoaUI",ResetOnSpawn=false,ZIndexBehavior=Enum.ZIndexBehavior.Sibling,IgnoreGuiInset=true,DisplayOrder=99})
 pcall(function() if syn and syn.protect_gui then syn.protect_gui(SG) end; SG.Parent=game:GetService("CoreGui") end)
 if not SG.Parent then SG.Parent=LP.PlayerGui end
@@ -153,7 +156,7 @@ end
 local WW,WH=WIN_WIDTH,WIN_HEIGHT; local winOpen=true; local winMin=false
 local bgOverlay=new("Frame",{Size=UDim2.new(1,0,1,0),BackgroundColor3=Color3.new(0,0,0),BackgroundTransparency=0.55,ZIndex=1},SG)
 local snowCont=new("Frame",{Size=UDim2.new(1,0,1,0),BackgroundTransparency=1,ZIndex=5},SG)
-local Win=new("Frame",{Name="Window",AnchorPoint=Vector2.new(0.5,0),Position=UDim2.new(0.5,0,0.5,-WH/2),Size=UDim2.new(0,WW,0,WH),BackgroundColor3=T.B1,ClipsDescendants=true,ZIndex=10},SG)
+local Win=new("Frame",{Name="Window",AnchorPoint=Vector2.new(0.5,0.5),Position=UDim2.new(0.5,0,0.5,0),Size=UDim2.new(0,WW,0,WH),BackgroundColor3=T.B1,ClipsDescendants=true,ZIndex=10},SG)
 cr(12,Win); local winSt=st(T.A2,1.5,Win); table.insert(AL,function(c) winSt.Color=c end)
 local TBar=new("Frame",{Size=UDim2.new(1,0,0,54),BackgroundColor3=T.B0},Win); cr(12,TBar)
 new("Frame",{Position=UDim2.new(0,0,0.5,0),Size=UDim2.new(1,0,0.5,0),BackgroundColor3=T.B0},TBar)
@@ -173,11 +176,25 @@ mb.MouseEnter:Connect(function() tw(mb,{BackgroundColor3=T.B3}); tw(mbBar,{Backg
 mb.MouseLeave:Connect(function() tw(mb,{BackgroundColor3=T.B4}); tw(mbBar,{BackgroundColor3=T.MT}) end)
 mb.MouseButton1Click:Connect(function() winMin=not winMin; tw(Win,{Size=winMin and UDim2.new(0,WW,0,54) or UDim2.new(0,WW,0,WH)},0.22) end)
 local drag,dragStart,winStart=false
-TBar.InputBegan:Connect(function(i) if i.UserInputType==Enum.UserInputType.MouseButton1 or i.UserInputType==Enum.UserInputType.Touch then drag=true; dragStart=i.Position; winStart=Win.Position end end)
-UIS.InputChanged:Connect(function(i) if drag and (i.UserInputType==Enum.UserInputType.MouseMovement or i.UserInputType==Enum.UserInputType.Touch) then local d=i.Position-dragStart; Win.Position=UDim2.new(winStart.X.Scale,winStart.X.Offset+d.X,winStart.Y.Scale,winStart.Y.Offset+d.Y) end end)
+TBar.InputBegan:Connect(function(i)
+    if i.UserInputType==Enum.UserInputType.MouseButton1 or i.UserInputType==Enum.UserInputType.Touch then
+        drag=true; dragStart=i.Position; winStart=Win.Position
+    end
+end)
+UIS.InputChanged:Connect(function(i)
+    if drag and (i.UserInputType==Enum.UserInputType.MouseMovement or i.UserInputType==Enum.UserInputType.Touch) then
+        local d=i.Position-dragStart
+        -- clamp within screen
+        local vp=workspace.CurrentCamera.ViewportSize
+        local ws=Win.AbsoluteSize
+        local nx=math.clamp(winStart.X.Offset+d.X, 0, vp.X-ws.X)
+        local ny=math.clamp(winStart.Y.Offset+d.Y, 0, vp.Y-ws.Y)
+        Win.Position=UDim2.new(0,nx,0,ny)
+    end
+end)
 UIS.InputEnded:Connect(function(i) if i.UserInputType==Enum.UserInputType.MouseButton1 or i.UserInputType==Enum.UserInputType.Touch then drag=false end end)
 local function setVisible(v) winOpen=v; Win.Visible=v; bgOverlay.Visible=v; snowCont.Visible=v end
-UIS.InputBegan:Connect(function(i) if not listeningForKey and i.KeyCode==toggleKey then setVisible(not winOpen) end end)
+UIS.InputBegan:Connect(function(i,gpe) if gpe then return end; if not listeningForKey and i.KeyCode==toggleKey then setVisible(not winOpen) end end)
 
 -- Tab bar + search
 local TopRow=new("Frame",{Position=UDim2.new(0,0,0,54),Size=UDim2.new(1,0,0,36),BackgroundColor3=T.B0},Win)
@@ -216,12 +233,19 @@ local function rebuildSearch(query)
 end
 searchBox:GetPropertyChangedSignal("Text"):Connect(function() rebuildSearch(searchBox.Text) end)
 
+-- Responsive scaling: always centered, scales down on small screens
 local function scaleWindow()
-    local vp=workspace.CurrentCamera.ViewportSize; local s=math.min(vp.X/WW,vp.Y/WH)
-    if s>=1 then Win.Size=UDim2.new(0,WW,0,WH) else s=s*0.93; Win.Size=UDim2.new(0,math.floor(WW*s),0,math.floor(WH*s)) end
-    Win.Position=UDim2.new(0.5,0,0.5,-Win.AbsoluteSize.Y/2)
+    local vp=workspace.CurrentCamera.ViewportSize
+    local s=math.min(vp.X/WW, vp.Y/WH)
+    local sw,sh
+    if s>=1 then sw=WW; sh=WH
+    else s=math.max(s*0.93,0.45); sw=math.floor(WW*s); sh=math.floor(WH*s) end
+    Win.Size = winMin and UDim2.new(0,sw,0,54) or UDim2.new(0,sw,0,sh)
+    Win.Position = UDim2.new(0.5,0,0.5,0)
+    Win.AnchorPoint = Vector2.new(0.5,0.5)
 end
-scaleWindow(); workspace.CurrentCamera:GetPropertyChangedSignal("ViewportSize"):Connect(scaleWindow)
+scaleWindow()
+workspace.CurrentCamera:GetPropertyChangedSignal("ViewportSize"):Connect(scaleWindow)
 
 -- Tab system
 local tabFrames,tabBtns={},{}
@@ -260,9 +284,10 @@ local function makeSection(parent,title)
         local acBar=new("Frame",{Size=UDim2.new(0,3,1,0),BackgroundColor3=T.A},hdr); table.insert(AL,function(c) acBar.BackgroundColor3=c end)
         tl({Position=UDim2.new(0,12,0,0),Size=UDim2.new(1,-36,1,0),BackgroundTransparency=1,Text=title:upper(),TextColor3=Color3.fromRGB(200,160,230),Font=Enum.Font.GothamBold,TextSize=10,TextXAlignment=Enum.TextXAlignment.Left,ZIndex=3},hdr)
         new("Frame",{AnchorPoint=Vector2.new(0,1),Position=UDim2.new(0,0,1,0),Size=UDim2.new(1,0,0,1),BackgroundColor3=T.BD},hdr)
+        -- Section icon: bigger (22x22), centered vertically, slightly inset
         if SECTION_ICON~="" then
-            local iconBox=new("Frame",{AnchorPoint=Vector2.new(1,0.5),Position=UDim2.new(1,-6,0.5,0),Size=UDim2.new(0,18,0,18),BackgroundTransparency=1,ZIndex=3},hdr)
-            new("ImageLabel",{Size=UDim2.new(1,0,1,0),BackgroundTransparency=1,Image=SECTION_ICON,ScaleType=Enum.ScaleType.Fit,ImageTransparency=0.3,ZIndex=4},iconBox)
+            local iconBox=new("Frame",{AnchorPoint=Vector2.new(1,0.5),Position=UDim2.new(1,-5,0.5,0),Size=UDim2.new(0,22,0,22),BackgroundTransparency=1,ZIndex=3},hdr)
+            new("ImageLabel",{Size=UDim2.new(1,0,1,0),BackgroundTransparency=1,Image=SECTION_ICON,ScaleType=Enum.ScaleType.Fit,ImageTransparency=0.2,ZIndex=4},iconBox)
         end
         hdr.MouseButton1Click:Connect(function()
             collapsed=not collapsed; sec.ClipsDescendants=true
@@ -272,7 +297,7 @@ local function makeSection(parent,title)
     end
     local api={}
     api._tabName=function(n,switchFn) tabName=n; tabSwitch=switchFn end
-    api.Destroy=function() sec:Destroy() end  -- lets dev scripts remove dynamic sections
+    api.Destroy=function() sec:Destroy() end
     local slideCallbacks={}; local slideActive=nil
     UIS.InputChanged:Connect(function(i) if slideActive and i.UserInputType==Enum.UserInputType.MouseMovement then local cb=slideCallbacks[slideActive]; if cb then cb(i.Position.X,i.Position.Y) end end end)
     UIS.InputEnded:Connect(function(i) if i.UserInputType==Enum.UserInputType.MouseButton1 then slideActive=nil end end)
@@ -454,7 +479,7 @@ local function startSnow()
 end
 local function stopSnow() if snowConn then snowConn:Disconnect(); snowConn=nil end end
 
--- ── WATERMARK — player name intentionally excluded ────────
+-- Watermark
 local wmFrame=new("Frame",{AnchorPoint=Vector2.new(0,1),Position=UDim2.new(0,14,1,-14),Size=UDim2.new(0,0,0,36),AutomaticSize=Enum.AutomaticSize.X,BackgroundColor3=T.B1,BackgroundTransparency=0.08,ZIndex=100,Visible=WM_SHOW},SG)
 cr(9,wmFrame); local wmStroke=st(T.A,1.2,wmFrame); table.insert(AL,function(c) wmStroke.Color=c end)
 new("UIListLayout",{FillDirection=Enum.FillDirection.Horizontal,VerticalAlignment=Enum.VerticalAlignment.Center,SortOrder=Enum.SortOrder.LayoutOrder,Padding=UDim.new(0,7)},wmFrame)
@@ -463,10 +488,11 @@ local wmDot=new("Frame",{Size=UDim2.new(0,7,0,7),BackgroundColor3=T.A,LayoutOrde
 local wmScriptLabel=tl({Size=UDim2.new(0,0,0,18),AutomaticSize=Enum.AutomaticSize.X,BackgroundTransparency=1,Text=SCRIPT_NAME,TextColor3=T.TX,Font=Enum.Font.GothamBold,TextSize=14,LayoutOrder=2,ZIndex=101},wmFrame)
 local wvBg=new("Frame",{Size=UDim2.new(0,0,0,18),AutomaticSize=Enum.AutomaticSize.X,BackgroundColor3=T.B3,LayoutOrder=3,ZIndex=101},wmFrame); cr(4,wvBg); st(T.BD,1,wvBg); pad(0,0,5,5,wvBg)
 local wmVLabel=tl({Size=UDim2.new(0,0,1,0),AutomaticSize=Enum.AutomaticSize.X,BackgroundTransparency=1,Text=SCRIPT_VERSION,TextColor3=T.A,Font=Enum.Font.GothamBold,TextSize=10,ZIndex=102},wvBg); table.insert(AL,function(c) wmVLabel.TextColor3=c end)
--- hidden stub — kept so scripts referencing UI.wmNameLabel don't error
 local wmNameLabel=new("TextLabel",{Visible=false,Size=UDim2.new(0,0,0,0),Text=LP.Name},SG)
 
--- Setup
+-- ── KEY SYSTEM ────────────────────────────────────────────
+-- KeyPersist = true  → key saved to file, user only enters once ever
+-- KeyPersist = false → key required every run (no caching)
 local function Setup(cfg)
     cfg=cfg or {}
     if cfg.Name then SCRIPT_NAME=cfg.Name; titleLabel.Text=cfg.Name; wmScriptLabel.Text=cfg.Name; iconLetter.Text=cfg.Name:sub(1,1):upper() end
@@ -474,6 +500,8 @@ local function Setup(cfg)
     if cfg.Icon~=nil then ICON_IMAGE=cfg.Icon; iconImg.Image=cfg.Icon; iconImg.Visible=cfg.Icon~=""; iconLetter.Visible=cfg.Icon=="" end
     if cfg.SectionIcon~=nil then SECTION_ICON=cfg.SectionIcon end
     if cfg.Snow==true then startSnow() elseif cfg.Snow==false then stopSnow() end
+    -- KeyPersist: true (default) = cache once. false = ask every run.
+    local persist = cfg.KeyPersist ~= false
     if cfg.WatermarkSubtext and cfg.WatermarkSubtext~="" then
         new("Frame",{Size=UDim2.new(0,1,0,16),BackgroundColor3=T.BD,LayoutOrder=4,ZIndex=101},wmFrame)
         tl({Size=UDim2.new(0,0,0,16),AutomaticSize=Enum.AutomaticSize.X,BackgroundTransparency=1,Text=cfg.WatermarkSubtext,TextColor3=Color3.fromRGB(130,100,120),Font=Enum.Font.Gotham,TextSize=10,LayoutOrder=5,ZIndex=101},wmFrame)
@@ -481,10 +509,16 @@ local function Setup(cfg)
     local keys=cfg.Keys or {}; local keyURL=cfg.KeyURL or ""; local keyFile=cfg.KeyFile or KEY_FILE
     if #keys==0 then return end
     local unlocked=false
-    if isfile and isfile(keyFile) then pcall(function() local k=readfile(keyFile):gsub("%s",""):lower(); for _,v in ipairs(keys) do if k==v:lower() then unlocked=true; break end end end) end
+    -- Only check saved key if persistence is on
+    if persist and isfile and isfile(keyFile) then
+        pcall(function()
+            local k=readfile(keyFile):gsub("%s",""):lower()
+            for _,v in ipairs(keys) do if k==v:lower() then unlocked=true; break end end
+        end)
+    end
     if unlocked then return end
     local ov=new("Frame",{Size=UDim2.new(1,0,1,0),BackgroundColor3=Color3.new(0,0,0),BackgroundTransparency=0.45,ZIndex=200},SG)
-    local md=new("Frame",{AnchorPoint=Vector2.new(0.5,0.5),Position=UDim2.new(0.5,0,0.5,0),Size=UDim2.new(0,360,0,270),BackgroundColor3=T.B3,ZIndex=201},ov); cr(12,md); st(T.BD,1,md)
+    local md=new("Frame",{AnchorPoint=Vector2.new(0.5,0.5),Position=UDim2.new(0.5,0,0.5,0),Size=UDim2.new(0,360,0,persist and 270 or 255),BackgroundColor3=T.B3,ZIndex=201},ov); cr(12,md); st(T.BD,1,md)
     new("Frame",{Size=UDim2.new(1,0,0,3),BackgroundColor3=T.A,ZIndex=202},md)
     tl({Position=UDim2.new(0,0,0,18),Size=UDim2.new(1,0,0,28),BackgroundTransparency=1,Text=SCRIPT_NAME,TextColor3=T.TX,Font=Enum.Font.GothamBold,TextSize=22,ZIndex=202},md)
     tl({Position=UDim2.new(0,0,0,48),Size=UDim2.new(1,0,0,16),BackgroundTransparency=1,Text="Enter your key to continue",TextColor3=T.MT,Font=Enum.Font.FredokaOne,TextSize=15,ZIndex=202},md)
@@ -492,16 +526,22 @@ local function Setup(cfg)
     local ib=new("Frame",{Position=UDim2.new(0,20,0,96),Size=UDim2.new(1,-40,0,36),BackgroundColor3=T.B4,ZIndex=202},md); cr(7,ib); local iSt=st(T.BD,1,ib)
     local ki=new("TextBox",{Position=UDim2.new(0,10,0,0),Size=UDim2.new(1,-20,1,0),BackgroundTransparency=1,Text="",PlaceholderText="Enter key...",PlaceholderColor3=T.MT,TextColor3=T.TX,Font=Enum.Font.FredokaOne,TextSize=13,ClearTextOnFocus=false,ZIndex=203},ib)
     local el=tl({Position=UDim2.new(0,24,0,138),Size=UDim2.new(1,-48,0,14),BackgroundTransparency=1,Text="",TextColor3=Color3.fromRGB(255,80,80),Font=Enum.Font.FredokaOne,TextSize=12,TextXAlignment=Enum.TextXAlignment.Left,ZIndex=202},md)
-    local authBtn=new("TextButton",{Position=UDim2.new(0,20,0,160),Size=UDim2.new(0.5,-24,0,38),BackgroundColor3=T.A,Text="Authenticate",TextColor3=Color3.new(1,1,1),Font=Enum.Font.FredokaOne,TextSize=14,ZIndex=202},md); cr(8,authBtn)
-    local getBtn=new("TextButton",{Position=UDim2.new(0.5,4,0,160),Size=UDim2.new(0.5,-24,0,38),BackgroundColor3=T.B4,Text="Get Key",TextColor3=T.TX,Font=Enum.Font.FredokaOne,TextSize=14,ZIndex=202},md); cr(8,getBtn); st(T.BD,1,getBtn)
-    tl({Position=UDim2.new(0,0,0,214),Size=UDim2.new(1,0,0,28),BackgroundTransparency=1,Text="Join the server to get your key",TextColor3=T.A,Font=Enum.Font.FredokaOne,TextSize=14,ZIndex=202},md)
+    -- Show "saved" badge if persistent
+    if persist then
+        tl({Position=UDim2.new(0,24,0,158),Size=UDim2.new(1,-48,0,12),BackgroundTransparency=1,Text="Key will be saved — you won't need to enter it again.",TextColor3=T.MT,Font=Enum.Font.FredokaOne,TextSize=10,TextXAlignment=Enum.TextXAlignment.Left,ZIndex=202},md)
+    end
+    local btnY = persist and 176 or 160
+    local authBtn=new("TextButton",{Position=UDim2.new(0,20,0,btnY),Size=UDim2.new(0.5,-24,0,38),BackgroundColor3=T.A,Text="Authenticate",TextColor3=Color3.new(1,1,1),Font=Enum.Font.FredokaOne,TextSize=14,ZIndex=202},md); cr(8,authBtn)
+    local getBtn=new("TextButton",{Position=UDim2.new(0.5,4,0,btnY),Size=UDim2.new(0.5,-24,0,38),BackgroundColor3=T.B4,Text="Get Key",TextColor3=T.TX,Font=Enum.Font.FredokaOne,TextSize=14,ZIndex=202},md); cr(8,getBtn); st(T.BD,1,getBtn)
+    tl({Position=UDim2.new(0,0,0,btnY+44),Size=UDim2.new(1,0,0,28),BackgroundTransparency=1,Text="Join the server to get your key",TextColor3=T.A,Font=Enum.Font.FredokaOne,TextSize=14,ZIndex=202},md)
     ki.Focused:Connect(function() tw(iSt,{Color=T.A}) end); ki.FocusLost:Connect(function() tw(iSt,{Color=T.BD}) end)
     getBtn.MouseButton1Click:Connect(function() pcall(function() if setclipboard then setclipboard(keyURL) end end) end)
     local function tryKey()
         local k=ki.Text:gsub("%s",""):lower(); local valid=false
         for _,v in ipairs(keys) do if k==v:lower() then valid=true; break end end
         if valid then
-            pcall(function() if writefile then writefile(keyFile,k) end end)
+            -- Only write to file if persistence mode is on
+            if persist then pcall(function() if writefile then writefile(keyFile,k) end end) end
             tw(ov,{BackgroundTransparency=1},0.3); tw(md,{BackgroundTransparency=1},0.3); task.delay(0.3,function() ov:Destroy() end); unlocked=true
         else
             el.Text="Incorrect key. Please try again."; tw(iSt,{Color=Color3.fromRGB(200,60,60)},0.1)
