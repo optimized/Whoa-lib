@@ -1,4 +1,4 @@
-# WhoaUI — Developer Docs
+# WhoaUI v2.1 — Developer Docs
 
 ---
 
@@ -14,20 +14,23 @@ local UI = loadstring(game:HttpGet("https://raw.githubusercontent.com/YOU/REPO/m
 
 ## Key system
 
-At the top of the lib file:
+WhoaUI has two key modes controlled by `KeyPersist`:
+
+| Mode | Behaviour |
+|------|-----------|
+| `KeyPersist = true` *(default)* | Key is saved locally after first entry — user never sees the prompt again |
+| `KeyPersist = false` | Key is required **every run** — nothing is written to disk |
 
 ```lua
-local KEY_ENABLED = true      -- false = no key prompt, loads instantly
-local KEY_VALUES  = {
-    "mykey1",                 -- add as many keys as you want
-    "mykey2",
-    -- "key3",
-}
-local KEY_URL  = "https://discord.gg/yourinvite"  -- copied to clipboard on "Get Key"
-local KEY_FILE = "WhoaKey.txt"                    -- caches the valid key locally
+UI.Setup({
+    Keys       = {"mykey1", "mykey2"},
+    KeyURL     = "https://discord.gg/yourinvite",   -- copied to clipboard on "Get Key"
+    KeyFile    = "WhoaKey.txt",                     -- file used to cache the key (persistent mode only)
+    KeyPersist = true,                              -- true = 1-time entry | false = every run
+})
 ```
 
-Keys are case-insensitive and whitespace-trimmed. Once a user enters a valid key it is saved locally — they will not be prompted again on future runs.
+Keys are case-insensitive and whitespace-trimmed.
 
 ---
 
@@ -39,12 +42,12 @@ Two icon variables sit at the top of the defaults block:
 -- Top-left window icon. Set to "" to show a letter fallback instead.
 local ICON_IMAGE   = "rbxassetid://YOUR_ASSET_ID"
 
--- Icon shown on the right side of every section header.
+-- Icon shown on the right side of every section header (22×22, Fit scale).
 -- Set to "" to hide it entirely.
 local SECTION_ICON = "rbxassetid://YOUR_ASSET_ID"
 ```
 
-Both accept any Roblox asset ID. You can set them to the same asset or different ones. Setting either to `""` disables that icon — `ICON_IMAGE` will fall back to a letter, `SECTION_ICON` will simply not render anything in the header.
+Both accept any Roblox asset ID. Setting either to `""` disables it — `ICON_IMAGE` falls back to a letter, `SECTION_ICON` simply hides.
 
 ---
 
@@ -52,7 +55,7 @@ Both accept any Roblox asset ID. You can set them to the same asset or different
 
 ```lua
 local SCRIPT_NAME    = "whoa"
-local SCRIPT_VERSION = "v2.0"
+local SCRIPT_VERSION = "v2.1"
 local WM_SHOW        = true        -- show watermark on load
 local WM_SUBTEXT     = ""          -- optional extra text in watermark
 local WIN_WIDTH      = 700
@@ -231,6 +234,14 @@ sec:AddCheckbox({ Name="Anonymous Mode", Flag="anon", Default=false,
 
 ```lua
 local UI = loadstring(game:HttpGet("YOUR_URL"))()
+
+UI.Setup({
+    Keys       = {"mykey"},
+    KeyURL     = "https://discord.gg/yourserver",
+    KeyPersist = true,   -- user only enters key once
+    Name       = "MyScript",
+    Version    = "v1.0",
+})
 
 local hL, hR, hTab, hSwitch = UI.AddTab("Main")
 local sec = UI.MakeSection(hL, "Combat")
