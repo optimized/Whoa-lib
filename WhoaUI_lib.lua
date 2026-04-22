@@ -124,8 +124,21 @@ local function toHex(c) return string.format("%02X%02X%02X",math.round(c.R*255),
 
 -- ── SCREENGUI ─────────────────────────────────────────────
 local SG=new("ScreenGui",{Name="WhoaUI",ResetOnSpawn=false,ZIndexBehavior=Enum.ZIndexBehavior.Sibling,IgnoreGuiInset=true,DisplayOrder=99})
-pcall(function() if syn and syn.protect_gui then syn.protect_gui(SG) end; SG.Parent=game:GetService("CoreGui") end)
-if not SG.Parent then SG.Parent=LP.PlayerGui end
+-- Anti-detection: gethui() is a hidden container game scripts can't enumerate at all
+pcall(function()
+    if gethui then
+        SG.Parent = gethui()
+    elseif syn and syn.protect_gui then
+        syn.protect_gui(SG); SG.Parent = game:GetService("CoreGui")
+    elseif protect_gui then
+        protect_gui(SG); SG.Parent = game:GetService("CoreGui")
+    else
+        SG.Parent = game:GetService("CoreGui")
+    end
+end)
+if not SG.Parent then SG.Parent = LP.PlayerGui end
+-- Blend in with Roblox-internal GUI names so name-scans don't flag it
+pcall(function() SG.Name = "RbxGui" end)
 
 -- ── NOTIFICATIONS ─────────────────────────────────────────
 local nh=new("Frame",{AnchorPoint=Vector2.new(1,1),Position=UDim2.new(1,-14,1,-14),Size=UDim2.new(0,270,1,-28),BackgroundTransparency=1,ZIndex=999},SG)
@@ -284,22 +297,22 @@ local function makeSection(parent,title)
     local tabName=""; local tabSwitch=nil; local collapsed=false
 
     if title and title~="" then
-        local hdr=new("TextButton",{Size=UDim2.new(1,0,0,28),BackgroundColor3=T.B2,LayoutOrder=0,Text="",ZIndex=2},body)
+        local hdr=new("TextButton",{Size=UDim2.new(1,0,0,32),BackgroundColor3=T.B2,LayoutOrder=0,Text="",ZIndex=2},body)
         local acBar=new("Frame",{Size=UDim2.new(0,3,1,0),BackgroundColor3=T.A},hdr); table.insert(AL,function(c) acBar.BackgroundColor3=c end)
-        tl({Position=UDim2.new(0,12,0,0),Size=UDim2.new(1,-36,1,0),BackgroundTransparency=1,Text=title:upper(),TextColor3=Color3.fromRGB(200,160,230),Font=Enum.Font.GothamBold,TextSize=10,TextXAlignment=Enum.TextXAlignment.Left,ZIndex=3},hdr)
+        tl({Position=UDim2.new(0,12,0,0),Size=UDim2.new(1,-44,1,0),BackgroundTransparency=1,Text=title:upper(),TextColor3=Color3.fromRGB(200,160,230),Font=Enum.Font.GothamBold,TextSize=10,TextXAlignment=Enum.TextXAlignment.Left,ZIndex=3},hdr)
         new("Frame",{AnchorPoint=Vector2.new(0,1),Position=UDim2.new(0,0,1,0),Size=UDim2.new(1,0,0,1),BackgroundColor3=T.BD},hdr)
         if SECTION_ICON~="" then
-            local ib=new("Frame",{AnchorPoint=Vector2.new(1,0.5),Position=UDim2.new(1,-5,0.5,0),Size=UDim2.new(0,22,0,22),BackgroundTransparency=1,ZIndex=3},hdr)
-            new("ImageLabel",{Size=UDim2.new(1,0,1,0),BackgroundTransparency=1,Image=SECTION_ICON,ScaleType=Enum.ScaleType.Fit,ImageTransparency=0.15,ZIndex=4},ib)
+            local ib=new("Frame",{AnchorPoint=Vector2.new(1,0.5),Position=UDim2.new(1,-8,0.5,0),Size=UDim2.new(0,26,0,26),BackgroundTransparency=1,ZIndex=3},hdr)
+            new("ImageLabel",{Size=UDim2.new(1,0,1,0),BackgroundTransparency=1,Image=SECTION_ICON,ScaleType=Enum.ScaleType.Fit,ImageTransparency=0,ZIndex=4},ib)
         end
         -- Collapse on header click
         hdr.MouseButton1Click:Connect(function()
             collapsed=not collapsed
             if collapsed then
                 sec.AutomaticSize=Enum.AutomaticSize.None
-                tw(sec,{Size=UDim2.new(1,0,0,28)},0.18)
+                tw(sec,{Size=UDim2.new(1,0,0,32)},0.18)
             else
-                tw(sec,{Size=UDim2.new(1,0,0,28)},0.01)
+                tw(sec,{Size=UDim2.new(1,0,0,32)},0.01)
                 task.delay(0.05,function()
                     if not collapsed then
                         sec.AutomaticSize=Enum.AutomaticSize.Y
@@ -346,6 +359,50 @@ local function makeSection(parent,title)
         btn.MouseEnter:Connect(function() tw(hbg,{BackgroundTransparency=0.82},0.1) end); btn.MouseLeave:Connect(function() tw(hbg,{BackgroundTransparency=1},0.1) end)
         btn.MouseButton1Click:Connect(function() on=not on; Flags[flg]=on; upd(); if cfg.Callback then cfg.Callback(on) end end)
         upd()
+    end
+
+    function api:AddToggle(cfg)
+        local flg=cfg.Flag or cfg.Name
+        local on=(Flags[flg]~=nil) and Flags[flg] or (cfg.Default==true); Flags[flg]=on
+        table.insert(searchItems,{label=cfg.Name,keywords=cfg.Name..(cfg.Flag or ""),tab=tabName,switch=tabSwitch})
+        local row=new("Frame",{Size=UDim2.new(1,0,0,36),BackgroundTransparency=1,LayoutOrder=nl()},body)
+        local hbg=new("Frame",{Size=UDim2.new(1,0,1,0),BackgroundColor3=T.B4,BackgroundTransparency=1},row); cr(4,hbg)
+        tl({Position=UDim2.new(0,12,0,0),Size=UDim2.new(1,-72,1,0),BackgroundTransparency=1,Text=cfg.Name,TextColor3=Color3.new(1,1,1),Font=Enum.Font.FredokaOne,TextSize=14,TextXAlignment=Enum.TextXAlignment.Left},row)
+        -- Pill track
+        local track=new("Frame",{AnchorPoint=Vector2.new(1,0.5),Position=UDim2.new(1,-10,0.5,0),Size=UDim2.new(0,44,0,24),BackgroundColor3=T.B0},row); cr(99,track)
+        local trkSt=st(T.BD,1.5,track)
+        -- Sliding knob
+        local knob=new("Frame",{AnchorPoint=Vector2.new(0,0.5),Position=UDim2.new(0,3,0.5,0),Size=UDim2.new(0,18,0,18),BackgroundColor3=T.MT,ZIndex=2},track); cr(99,knob)
+        local function upd(anim)
+            local t=anim and 0.22 or 0
+            local es=anim and Enum.EasingStyle.Back or Enum.EasingStyle.Quad
+            if on then
+                tw(track,{BackgroundColor3=T.A},t,Enum.EasingStyle.Quad)
+                tw(trkSt,{Color=T.A},t)
+                tw(knob,{Position=UDim2.new(1,-21,0.5,0),BackgroundColor3=Color3.new(1,1,1)},t,es)
+            else
+                tw(track,{BackgroundColor3=T.B0},t,Enum.EasingStyle.Quad)
+                tw(trkSt,{Color=T.BD},t)
+                tw(knob,{Position=UDim2.new(0,3,0.5,0),BackgroundColor3=T.MT},t,es)
+            end
+        end
+        table.insert(AL,function(c) if on then track.BackgroundColor3=c; trkSt.Color=c end end)
+        if cfg.Keybind then
+            local kc=typeof(cfg.Keybind)=="EnumItem" and cfg.Keybind or Enum.KeyCode[tostring(cfg.Keybind)]
+            if kc then UIS.InputBegan:Connect(function(i) if not listeningForKey and i.KeyCode==kc then on=not on; Flags[flg]=on; upd(true); if cfg.Callback then cfg.Callback(on) end end end) end
+        end
+        local btn=new("TextButton",{Size=UDim2.new(1,0,1,0),BackgroundTransparency=1,Text="",ZIndex=2},row)
+        btn.MouseEnter:Connect(function() tw(hbg,{BackgroundTransparency=0.82},0.1) end)
+        btn.MouseLeave:Connect(function() tw(hbg,{BackgroundTransparency=1},0.1) end)
+        btn.MouseButton1Click:Connect(function()
+            on=not on; Flags[flg]=on; upd(true)
+            if cfg.Callback then cfg.Callback(on) end
+        end)
+        upd(false)
+        return {
+            Set=function(v) on=v; Flags[flg]=v; upd(true) end,
+            Get=function() return on end
+        }
     end
 
     function api:AddSlider(cfg)
@@ -411,8 +468,21 @@ local function makeSection(parent,title)
         table.insert(searchItems,{label=cfg.Name,keywords=cfg.Name,tab=tabName,switch=tabSwitch})
         local wr=new("Frame",{Size=UDim2.new(1,0,0,38),BackgroundTransparency=1,LayoutOrder=nl()},body)
         local btn=new("TextButton",{Position=UDim2.new(0,10,0.5,-13),Size=UDim2.new(1,-20,0,26),BackgroundColor3=T.B2,Text=cfg.Name,TextColor3=Color3.new(1,1,1),Font=Enum.Font.FredokaOne,TextSize=14},wr); cr(6,btn); local bSt=st(T.BD,1,btn)
-        btn.MouseEnter:Connect(function() tw(btn,{BackgroundColor3=T.B4,TextColor3=T.A}); tw(bSt,{Color=T.A},0.1) end); btn.MouseLeave:Connect(function() tw(btn,{BackgroundColor3=T.B2,TextColor3=Color3.new(1,1,1)}); tw(bSt,{Color=T.BD},0.1) end)
-        btn.MouseButton1Down:Connect(function() tw(btn,{BackgroundColor3=T.B0},0.07) end); btn.MouseButton1Click:Connect(function() tw(btn,{BackgroundColor3=T.B2},0.1); if cfg.Callback then cfg.Callback() end end)
+        if cfg.Keybind then
+            local kc=typeof(cfg.Keybind)=="EnumItem" and cfg.Keybind or Enum.KeyCode[tostring(cfg.Keybind)]
+            if kc then
+                local kb=new("TextLabel",{AnchorPoint=Vector2.new(1,0.5),Position=UDim2.new(1,-5,0.5,0),Size=UDim2.new(0,0,0,15),AutomaticSize=Enum.AutomaticSize.X,BackgroundColor3=T.B3,Text=" "..kc.Name.." ",TextColor3=T.MT,Font=Enum.Font.GothamBold,TextSize=9,ZIndex=5},btn); cr(3,kb); st(T.BD,1,kb)
+                UIS.InputBegan:Connect(function(i) if not listeningForKey and i.KeyCode==kc then tw(btn,{BackgroundColor3=T.B0},0.05); task.delay(0.1,function() tw(btn,{BackgroundColor3=T.B2},0.12) end); if cfg.Callback then cfg.Callback() end end end)
+            end
+        end
+        btn.MouseEnter:Connect(function() tw(btn,{BackgroundColor3=T.B4,TextColor3=T.A}); tw(bSt,{Color=T.A},0.1) end)
+        btn.MouseLeave:Connect(function() tw(btn,{BackgroundColor3=T.B2,TextColor3=Color3.new(1,1,1)}); tw(bSt,{Color=T.BD},0.1) end)
+        btn.MouseButton1Down:Connect(function() tw(btn,{BackgroundColor3=T.B0},0.05) end)
+        btn.MouseButton1Click:Connect(function()
+            tw(btn,{BackgroundColor3=T.B4},0.05)
+            task.delay(0.12,function() tw(btn,{BackgroundColor3=T.B2},0.15) end)
+            if cfg.Callback then cfg.Callback() end
+        end)
     end
 
     function api:AddTextBox(cfg)
