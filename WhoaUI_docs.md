@@ -16,18 +16,91 @@ local UI = loadstring(game:HttpGet("https://raw.githubusercontent.com/YOU/REPO/m
 
 ## Key system
 
-At the very top of the lib file, 4 lines control it:
+At the very top of the lib file you will find a clearly marked config block. Everything you need to touch is in there — nothing else needs to be edited.
 
 ```lua
-local KEY_ENABLED  = true          -- false = no key prompt at all
-local KEY_VALUE    = "woah67"      -- the correct key (always lowercase)
-local KEY_URL      = "https://discord.gg/..."  -- copied to clipboard on "Get Key"
-local KEY_FILE     = "WhoaKey.txt" -- saves valid key so user only types once
+-- ── KEY SYSTEM CONFIG ────────────────────────────
+local KEY_ENABLED = true      -- false = no key prompt at all, loads instantly
+local KEY_VALUES  = {
+    "mykey1",                 -- add as many keys as you want
+    "mykey2",
+    -- "key3",               -- uncomment to add more
+}
+local KEY_URL  = "https://discord.gg/yourinvite"  -- copied to clipboard on "Get Key"
+local KEY_FILE = "WhoaKey.txt"                    -- caches the valid key locally
 ```
 
-**To disable keys entirely** just set `KEY_ENABLED = false` — the prompt never shows.
+### No keys at all
 
-**To use your own key system** (e.g. check against a webhook or external list), replace the `tryKey` function body inside the `if KEY_ENABLED then` block with your own logic. The only requirement is that you set `unlocked = true` when the check passes.
+Set `KEY_ENABLED = false` — the prompt never shows and the UI loads instantly.
+
+### Single key
+
+```lua
+local KEY_ENABLED = true
+local KEY_VALUES  = { "mysecretkey" }
+```
+
+### Multiple keys (e.g. one per user)
+
+```lua
+local KEY_ENABLED = true
+local KEY_VALUES  = {
+    "alpha001",
+    "beta002",
+    "vip999",
+}
+```
+
+Keys are **case-insensitive** and **whitespace-trimmed**, so `" MyKey1 "` and `"mykey1"` both work.
+
+Once a user enters a valid key it is saved to `KEY_FILE` locally — they will not be prompted again on future runs.
+
+---
+
+## Script defaults
+
+Also at the top of the lib, easily editable:
+
+```lua
+local SCRIPT_NAME    = "whoa"                      -- name shown in titlebar + watermark
+local SCRIPT_VERSION = "v2.0"                      -- version badge in watermark
+local ICON_IMAGE     = "rbxassetid://..."          -- set "" for letter icon fallback
+local WM_SHOW        = true                        -- show watermark on load
+local WM_SUBTEXT     = ""                          -- extra text in watermark (optional)
+local WIN_WIDTH      = 700                         -- window width in pixels
+local WIN_HEIGHT     = 500                         -- window height in pixels
+local TOGGLE_KEY     = Enum.KeyCode.RightShift     -- default key to show/hide UI
+local SNOW_ENABLED   = false                       -- snow particles on by default
+local NOTIF_DURATION = 3                           -- default notification duration (seconds)
+```
+
+---
+
+## Theme
+
+Directly below the script defaults is the theme table. Edit any color to retheme the entire UI — all elements update automatically.
+
+```lua
+local T = {
+    A  = Color3.fromRGB(255, 182, 215),   -- primary accent (buttons, sliders, etc.)
+    A2 = Color3.fromRGB(255, 150, 195),   -- window border
+    B0 = Color3.fromRGB(9,   9,  13),     -- darkest background
+    B1 = Color3.fromRGB(14,  14, 19),     -- window background
+    B2 = Color3.fromRGB(20,  20, 27),     -- element background
+    B3 = Color3.fromRGB(26,  26, 35),     -- section background
+    B4 = Color3.fromRGB(34,  34, 46),     -- hovered state
+    BD = Color3.fromRGB(52,  52, 70),     -- borders
+    TX = Color3.fromRGB(255, 255, 255),   -- main text
+    MT = Color3.fromRGB(115, 115, 145),   -- muted text
+}
+```
+
+You can also change the accent color at runtime from your script:
+
+```lua
+UI.SetAccent(Color3.fromRGB(100, 200, 255))
+```
 
 ---
 
@@ -48,24 +121,24 @@ local sec = UI.MakeSection(leftCol, "Section Title")
 sec._tabName(tabName, switchFn)   -- always include — powers search navigation
 ```
 
-Second argument is the title shown in the header. Pass `""` for no header.
+Pass `""` as the second argument for a section with no header.
 
 ### 3 — Add elements
 
 #### Checkbox
 ```lua
 sec:AddCheckbox({
-    Name     = "My Toggle",   -- label shown
-    Flag     = "mytoggle",    -- save key (must be unique)
-    Default  = false,         -- starting value
+    Name     = "My Toggle",
+    Flag     = "mytoggle",    -- unique save key
+    Default  = false,
     Keybind  = "G",           -- optional keyboard shortcut
-    Callback = function(v) end  -- v = true/false
+    Callback = function(v) end
 })
 ```
 
 #### Slider
 ```lua
-sec:AddSlider({
+local s = sec:AddSlider({
     Name     = "Walk Speed",
     Flag     = "wspeed",
     Min      = 0,
@@ -74,24 +147,21 @@ sec:AddSlider({
     Decimals = 0,             -- 0 = integer, 1+ = decimal places
     Callback = function(v) end
 })
--- returns {Get = fn, Set = fn}
-local s = sec:AddSlider({...})
 s:Set(100)   -- set value programmatically
 s:Get()      -- read current value
 ```
 
 #### Dropdown
 ```lua
-sec:AddDropdown({
+local d = sec:AddDropdown({
     Name     = "Mode",
     Flag     = "mode",
     Items    = { "Option A", "Option B", "Option C" },
     Default  = "Option A",
     Callback = function(v) end
 })
--- returns {Get = fn, Rebuild = fn}
-local d = sec:AddDropdown({...})
 d:Rebuild({"New A", "New B"})  -- swap items at runtime
+d:Get()                        -- read current value
 ```
 
 #### Button
@@ -104,14 +174,14 @@ sec:AddButton({
 
 #### TextBox
 ```lua
-sec:AddTextBox({
+local t = sec:AddTextBox({
     Name        = "Username",
     Flag        = "username",
     Placeholder = "Enter name...",
     Default     = "",
     Callback    = function(text) end  -- fires on focus lost
 })
--- returns {Get = fn}
+t:Get()  -- read current value
 ```
 
 #### ColorPicker
@@ -128,12 +198,11 @@ sec:AddColorPicker({
 ```lua
 sec:AddKeybind({
     Name     = "Toggle UI",
-    Flag     = "tkey",
+    Flag     = "tkey",        -- "tkey" is special: automatically updates the window toggle key
     Default  = Enum.KeyCode.RightShift,
     Callback = function(keyCode) end
 })
 ```
-> Flag `"tkey"` is special — it automatically updates the window toggle key.
 
 #### Label
 ```lua
@@ -152,16 +221,7 @@ sec:AddDivider()
 ```lua
 UI.Notify("Title", "Body message", "Success", 3)
 -- Types: "Success"  "Error"  "Warning"
--- Last arg is duration in seconds
-```
-
----
-
-## Accent color
-
-```lua
-UI.SetAccent(Color3.fromRGB(100, 200, 255))
--- Updates every accent-colored element live
+-- Last arg is duration in seconds (optional, defaults to NOTIF_DURATION)
 ```
 
 ---
@@ -190,12 +250,10 @@ UI.StopSnow()
 ## Anonymous mode (example)
 
 ```lua
-local refs = UI  -- UI exposes pbNameLabel, avImg, wmFrame, wmNameLabel, realAvatar()
-
 sec:AddCheckbox({ Name="Anonymous Mode", Flag="anon", Default=false,
     Callback = function(v)
-        refs.pbNameLabel.Text = v and "Hidden" or game.Players.LocalPlayer.DisplayName
-        refs.avImg.Image      = v and "rbxassetid://1353560252" or (refs.realAvatar() or "")
+        UI.pbNameLabel.Text = v and "Hidden" or game.Players.LocalPlayer.DisplayName
+        UI.avImg.Image      = v and "rbxassetid://1353560252" or (UI.realAvatar() or "")
     end
 })
 ```
