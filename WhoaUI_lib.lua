@@ -13,8 +13,8 @@
 -- └─────────────────────────────────────────────────────────┘
 local KEY_ENABLED = true
 local KEY_VALUES  = {
-    "woah67",        -- key 1
-    -- "key2here",   -- add more keys by uncommenting/adding lines
+    "woah67",
+    -- "key2here",
     -- "key3here",
 }
 local KEY_URL  = "https://discord.gg/Q9xJ5s5RFg"
@@ -22,40 +22,44 @@ local KEY_FILE = "WhoaKey.txt"
 
 -- ┌─────────────────────────────────────────────────────────┐
 -- │                   SCRIPT DEFAULTS                        │
--- │  These are the defaults. Override after loading if       │
--- │  needed, or just edit them here directly.                │
 -- └─────────────────────────────────────────────────────────┘
 local SCRIPT_NAME    = "whoa"
 local SCRIPT_VERSION = "v2.0"
-local ICON_IMAGE     = "rbxassetid://134387754737125"  -- set "" for letter icon
-local WM_SHOW        = true         -- show watermark on load
-local WM_SUBTEXT     = ""           -- optional extra text in watermark
+
+-- Top-left window icon asset ID.
+-- Set to "" to show a letter fallback instead.
+local ICON_IMAGE   = "rbxassetid://134387754737125"
+
+-- Icon shown in every section header (the small button on the right side).
+-- Set to "" to hide it entirely.
+local SECTION_ICON = "rbxassetid://134387754737125"
+
+local WM_SHOW        = true
+local WM_SUBTEXT     = ""
 local WIN_WIDTH      = 700
 local WIN_HEIGHT     = 500
 local TOGGLE_KEY     = Enum.KeyCode.RightShift
-local SNOW_ENABLED   = false        -- snow on by default
-local NOTIF_DURATION = 3            -- default notification duration (seconds)
+local SNOW_ENABLED   = false
+local NOTIF_DURATION = 3
 
 -- ┌─────────────────────────────────────────────────────────┐
 -- │                      THEME                              │
--- │  Edit any color here to retheme the entire UI.          │
 -- └─────────────────────────────────────────────────────────┘
 local T = {
-    A  = Color3.fromRGB(255, 182, 215),   -- primary accent
-    A2 = Color3.fromRGB(255, 150, 195),   -- window border
-    B0 = Color3.fromRGB(9,   9,  13),     -- darkest bg
-    B1 = Color3.fromRGB(14,  14, 19),     -- window bg
-    B2 = Color3.fromRGB(20,  20, 27),     -- element bg
-    B3 = Color3.fromRGB(26,  26, 35),     -- section bg
-    B4 = Color3.fromRGB(34,  34, 46),     -- hovered
-    BD = Color3.fromRGB(52,  52, 70),     -- border
-    TX = Color3.fromRGB(255, 255, 255),   -- main text
-    MT = Color3.fromRGB(115, 115, 145),   -- muted text
+    A  = Color3.fromRGB(255, 182, 215),
+    A2 = Color3.fromRGB(255, 150, 195),
+    B0 = Color3.fromRGB(9,   9,  13),
+    B1 = Color3.fromRGB(14,  14, 19),
+    B2 = Color3.fromRGB(20,  20, 27),
+    B3 = Color3.fromRGB(26,  26, 35),
+    B4 = Color3.fromRGB(34,  34, 46),
+    BD = Color3.fromRGB(52,  52, 70),
+    TX = Color3.fromRGB(255, 255, 255),
+    MT = Color3.fromRGB(115, 115, 145),
 }
 
 -- ══════════════════════════════════════════════════════════
---  INTERNALS — do not edit below unless you know what
---  you are doing
+--  INTERNALS
 -- ══════════════════════════════════════════════════════════
 
 local Players = game:GetService("Players")
@@ -199,7 +203,6 @@ if not SG.Parent then SG.Parent = LP.PlayerGui end
 local unlocked = not KEY_ENABLED
 
 if KEY_ENABLED then
-    -- check cached key file first so returning users skip the prompt
     if isfile and isfile(KEY_FILE) then
         pcall(function()
             local k = readfile(KEY_FILE):gsub("%s",""):lower()
@@ -288,7 +291,8 @@ cr(12,TBar)
 new("Frame",{Position=UDim2.new(0,0,0.5,0),Size=UDim2.new(1,0,0.5,0),BackgroundColor3=T.B0},TBar)
 new("Frame",{AnchorPoint=Vector2.new(0,1),Position=UDim2.new(0,0,1,0),Size=UDim2.new(1,0,0,1),BackgroundColor3=T.BD},TBar)
 
-local iconBg = new("Frame",{AnchorPoint=Vector2.new(0,0.5),Position=UDim2.new(0,11,0.5,0),Size=UDim2.new(0,36,0,36),BackgroundColor3=T.B0,ZIndex=2},TBar); cr(8,iconBg)
+-- top-left window icon
+local iconBg  = new("Frame",{AnchorPoint=Vector2.new(0,0.5),Position=UDim2.new(0,11,0.5,0),Size=UDim2.new(0,36,0,36),BackgroundColor3=T.B0,ZIndex=2},TBar); cr(8,iconBg)
 local iconImg = new("ImageLabel",{AnchorPoint=Vector2.new(0.5,0.5),Position=UDim2.new(0.5,0,0.5,0),Size=UDim2.new(1,0,1,0),BackgroundTransparency=1,Image=ICON_IMAGE,ScaleType=Enum.ScaleType.Fit,ZIndex=3,Visible=ICON_IMAGE~=""},iconBg); cr(8,iconImg)
 tl({Size=UDim2.new(1,0,1,0),BackgroundTransparency=1,Text="W",TextColor3=Color3.new(1,1,1),Font=Enum.Font.GothamBold,TextSize=16,ZIndex=3,Visible=ICON_IMAGE==""},iconBg)
 tl({AnchorPoint=Vector2.new(0,0.5),Position=UDim2.new(0,56,0.5,0),Size=UDim2.new(0,100,1,0),BackgroundTransparency=1,Text=SCRIPT_NAME,TextColor3=T.TX,Font=Enum.Font.GothamBold,TextSize=19,TextXAlignment=Enum.TextXAlignment.Left},TBar)
@@ -376,7 +380,7 @@ local function rebuildSearch(query)
             local res = new("Frame",{Size=UDim2.new(1,0,0,36),BackgroundColor3=T.B3,LayoutOrder=found,ZIndex=51},searchOverlay); cr(6,res); st(T.BD,1,res)
             tl({Position=UDim2.new(0,12,0,0),Size=UDim2.new(0.52,0,1,0),BackgroundTransparency=1,Text=item.label,TextColor3=T.TX,Font=Enum.Font.FredokaOne,TextSize=14,TextXAlignment=Enum.TextXAlignment.Left,ZIndex=52},res)
             tl({Position=UDim2.new(0.52,0,0,0),Size=UDim2.new(0.26,0,1,0),BackgroundTransparency=1,Text=item.tab,TextColor3=T.MT,Font=Enum.Font.Gotham,TextSize=11,TextXAlignment=Enum.TextXAlignment.Right,ZIndex=52},res)
-            local goBtn = new("TextButton",{AnchorPoint=Vector2.new(1,0.5),Position=UDim2.new(1,-6,0.5,0),Size=UDim2.new(0,42,0,22),BackgroundColor3=T.B4,Text="→ go",TextColor3=T.A,Font=Enum.Font.GothamBold,TextSize=11,ZIndex=53},res)
+            local goBtn = new("TextButton",{AnchorPoint=Vector2.new(1,0.5),Position=UDim2.new(1,-6,0.5,0),Size=UDim2.new(0,42,0,22),BackgroundColor3=T.B4,Text="go",TextColor3=T.A,Font=Enum.Font.GothamBold,TextSize=11,ZIndex=53},res)
             cr(4,goBtn); st(T.BD,1,goBtn)
             local rowBtn = new("TextButton",{Size=UDim2.new(1,0,1,0),BackgroundTransparency=1,Text="",ZIndex=54},res)
             rowBtn.MouseEnter:Connect(function() tw(res,{BackgroundColor3=T.B4},0.08) end)
@@ -451,10 +455,16 @@ local function makeSection(parent, title)
         local acBar=new("Frame",{Size=UDim2.new(0,3,1,0),BackgroundColor3=T.A},hdr)
         table.insert(AL,function(c) acBar.BackgroundColor3=c end)
         tl({Position=UDim2.new(0,12,0,0),Size=UDim2.new(1,-36,1,0),BackgroundTransparency=1,Text=title:upper(),TextColor3=Color3.fromRGB(200,160,230),Font=Enum.Font.GothamBold,TextSize=10,TextXAlignment=Enum.TextXAlignment.Left,ZIndex=3},hdr)
-        local arrow=new("TextLabel",{AnchorPoint=Vector2.new(1,0.5),Position=UDim2.new(1,-10,0.5,0),Size=UDim2.new(0,16,0,16),BackgroundTransparency=1,Text="▾",TextColor3=T.MT,Font=Enum.Font.GothamBold,TextSize=12,ZIndex=3},hdr)
         new("Frame",{AnchorPoint=Vector2.new(0,1),Position=UDim2.new(0,0,1,0),Size=UDim2.new(1,0,0,1),BackgroundColor3=T.BD},hdr)
+
+        -- section header icon (replaces the old arrow text)
+        if SECTION_ICON ~= "" then
+            local iconBox = new("Frame",{AnchorPoint=Vector2.new(1,0.5),Position=UDim2.new(1,-6,0.5,0),Size=UDim2.new(0,18,0,18),BackgroundTransparency=1,ZIndex=3},hdr)
+            new("ImageLabel",{Size=UDim2.new(1,0,1,0),BackgroundTransparency=1,Image=SECTION_ICON,ScaleType=Enum.ScaleType.Fit,ImageTransparency=0.3,ZIndex=4},iconBox)
+        end
+
         hdr.MouseButton1Click:Connect(function()
-            collapsed=not collapsed; arrow.Text=collapsed and "▸" or "▾"
+            collapsed=not collapsed
             sec.ClipsDescendants=true
             if collapsed then tw(sec,{Size=UDim2.new(1,0,0,28)},0.18)
             else sec.AutomaticSize=Enum.AutomaticSize.Y; sec.Size=UDim2.new(1,0,0,0) end
@@ -709,8 +719,7 @@ local function startSnow()
     if snowConn then return end
     snowConn = RS.Heartbeat:Connect(function(dt)
         for _, fl in ipairs(flakes) do
-            fl.y = fl.y + fl.spd * dt
-            fl.x = fl.x + fl.dx
+            fl.y = fl.y + fl.spd * dt; fl.x = fl.x + fl.dx
             if fl.y > 1.05 then fl.y = -0.04; fl.x = math.random(0,100)/100 end
             fl.x = fl.x < 0 and 1 or fl.x > 1 and 0 or fl.x
             fl.ui.Position = UDim2.new(fl.x, 0, fl.y, 0)
