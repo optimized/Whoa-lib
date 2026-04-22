@@ -176,10 +176,10 @@ mb.MouseButton1Click:Connect(function() winMin=not winMin; tw(Win,{Size=winMin a
 local drag,dragStart,winStart=false,nil,nil
 TBar.InputBegan:Connect(function(i)
     if i.UserInputType==Enum.UserInputType.MouseButton1 or i.UserInputType==Enum.UserInputType.Touch then
-        drag=true; dragStart=i.Position
-        -- Snap to absolute offset (no scale component) before recording start
-        Win.Position=UDim2.new(0,Win.AbsolutePosition.X,0,Win.AbsolutePosition.Y)
-        winStart=Win.Position
+        drag=true
+        dragStart=i.Position
+        -- Read offsets directly — AbsolutePosition includes GuiInset in CoreGui, causing a jump on drag start
+        winStart=UDim2.new(0, Win.Position.X.Offset, 0, Win.Position.Y.Offset)
     end
 end)
 UIS.InputChanged:Connect(function(i)
@@ -231,7 +231,7 @@ local function rebuildSearch(q)
     q=q:lower():gsub("%s","")
     if q=="" then searchOverlay.Visible=false; return end
     searchOverlay.Visible=true
-    for _,c in ipairs(searchOverlay:GetChildren()) do if c:IsA("Frame") then c:Destroy() end end
+    for _,c in ipairs(searchOverlay:GetChildren()) do if c:IsA("GuiObject") then c:Destroy() end end
     local found=0
     for _,item in ipairs(searchItems) do
         if item.keywords:lower():gsub("%s",""):find(q,1,true) then
@@ -300,7 +300,12 @@ local function makeSection(parent,title)
                 tw(sec,{Size=UDim2.new(1,0,0,28)},0.18)
             else
                 tw(sec,{Size=UDim2.new(1,0,0,28)},0.01)
-                task.delay(0.05,function() sec.AutomaticSize=Enum.AutomaticSize.Y; sec.Size=UDim2.new(1,0,0,0) end)
+                task.delay(0.05,function()
+                    if not collapsed then
+                        sec.AutomaticSize=Enum.AutomaticSize.Y
+                        sec.Size=UDim2.new(1,0,0,0)
+                    end
+                end)
             end
         end)
     end
