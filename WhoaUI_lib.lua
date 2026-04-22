@@ -17,8 +17,8 @@ local KEY_VALUES  = {
     -- "key2here",
     -- "key3here",
 }
-local KEY_URL  = "https://discord.gg/Q9xJ5s5RFg"
-local KEY_FILE = "WhoaKey.txt"
+local KEY_URL  = "https://discord.gg/yourserver"
+local KEY_FILE = "ExampleKey.txt"
 
 -- ┌─────────────────────────────────────────────────────────┐
 -- │                   SCRIPT DEFAULTS                        │
@@ -39,7 +39,7 @@ local WM_SUBTEXT     = ""
 local WIN_WIDTH      = 700
 local WIN_HEIGHT     = 500
 local TOGGLE_KEY     = Enum.KeyCode.RightShift
-local SNOW_ENABLED   = false
+local SNOW_ENABLED   = true
 local NOTIF_DURATION = 3
 
 -- ┌─────────────────────────────────────────────────────────┐
