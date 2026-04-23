@@ -1,5 +1,5 @@
 -- ══════════════════════════════════════════════════════════
---   WhoaUI v2.2 — Loadstring Library
+--   WhoaUI v2.3 — Loadstring Library
 --   Usage:  local UI = loadstring(game:HttpGet("YOUR_RAW_URL"))()
 --           UI.Setup({ Keys={"mykey"}, KeyURL="...", ... })
 -- ══════════════════════════════════════════════════════════
@@ -37,6 +37,7 @@ end
 local AL = {}
 local function setA(c) T.A=c; for _,fn in ipairs(AL) do pcall(fn,c) end end
 local Flags           = {}
+local togByFlag       = {}   -- flag -> list of {setOnFn} closures for every toggle sharing that flag
 local toggleKey       = TOGGLE_KEY
 local listeningForKey = false
 
@@ -146,11 +147,16 @@ new("UIListLayout",{FillDirection=Enum.FillDirection.Vertical,VerticalAlignment=
 local nCol={Success=Color3.fromRGB(60,220,130),Error=Color3.fromRGB(255,75,75),Warning=Color3.fromRGB(255,160,40)}
 local function Notify(title,body,ntype,dur)
     local col=nCol[ntype] or T.A
-    local nf=new("Frame",{Size=UDim2.new(1,0,0,62),BackgroundColor3=T.B3,ZIndex=999},nh); cr(8,nf); st(T.BD,1,nf)
-    new("Frame",{Size=UDim2.new(0,3,0.75,0),AnchorPoint=Vector2.new(0,0.5),Position=UDim2.new(0,0,0.5,0),BackgroundColor3=col,ZIndex=1000},nf)
-    tl({Position=UDim2.new(0,12,0,9),Size=UDim2.new(1,-16,0,18),BackgroundTransparency=1,Text=title,TextColor3=T.A,Font=Enum.Font.FredokaOne,TextSize=13,TextXAlignment=Enum.TextXAlignment.Left,ZIndex=1000},nf)
-    tl({Position=UDim2.new(0,12,0,29),Size=UDim2.new(1,-16,0,22),BackgroundTransparency=1,Text=body,TextColor3=T.TX,Font=Enum.Font.FredokaOne,TextSize=12,TextXAlignment=Enum.TextXAlignment.Left,TextWrapped=true,ZIndex=1000},nf)
-    nf.Position=UDim2.new(1.1,0,0,0); tw(nf,{Position=UDim2.new(0,0,0,0)},0.25,Enum.EasingStyle.Back)
+    local nf=new("Frame",{Size=UDim2.new(1,0,0,64),BackgroundColor3=T.B3,ZIndex=999},nh); cr(8,nf); st(T.BD,1,nf)
+    -- Gradient accent bar on the left
+    local acBar=new("Frame",{Size=UDim2.new(0,3,0.8,0),AnchorPoint=Vector2.new(0,0.5),Position=UDim2.new(0,0,0.5,0),BackgroundColor3=col,ZIndex=1000},nf); cr(99,acBar)
+    new("UIGradient",{Color=ColorSequence.new{ColorSequenceKeypoint.new(0,col),ColorSequenceKeypoint.new(1,Color3.new(1,1,1))},Transparency=NumberSequence.new{NumberSequenceKeypoint.new(0,0),NumberSequenceKeypoint.new(1,0.4)},Rotation=90},acBar)
+    -- Top colored stripe
+    local stripe=new("Frame",{Size=UDim2.new(1,0,0,2),BackgroundColor3=col,ZIndex=1000},nf); cr(99,stripe)
+    new("UIGradient",{Color=ColorSequence.new{ColorSequenceKeypoint.new(0,col),ColorSequenceKeypoint.new(0.7,col),ColorSequenceKeypoint.new(1,Color3.new(0,0,0))},Transparency=NumberSequence.new{NumberSequenceKeypoint.new(0,0),NumberSequenceKeypoint.new(0.6,0.2),NumberSequenceKeypoint.new(1,1)}},stripe)
+    tl({Position=UDim2.new(0,12,0,10),Size=UDim2.new(1,-16,0,18),BackgroundTransparency=1,Text=title,TextColor3=col,Font=Enum.Font.GothamBold,TextSize=13,TextXAlignment=Enum.TextXAlignment.Left,ZIndex=1000},nf)
+    tl({Position=UDim2.new(0,12,0,30),Size=UDim2.new(1,-16,0,24),BackgroundTransparency=1,Text=body,TextColor3=T.TX,Font=Enum.Font.FredokaOne,TextSize=12,TextXAlignment=Enum.TextXAlignment.Left,TextWrapped=true,ZIndex=1000},nf)
+    nf.Position=UDim2.new(1.1,0,0,0); tw(nf,{Position=UDim2.new(0,0,0,0)},0.28,Enum.EasingStyle.Back)
     task.delay(dur or NOTIF_DURATION,function() tw(nf,{Position=UDim2.new(1.1,0,0,0)},0.2); task.delay(0.25,function() nf:Destroy() end) end)
 end
 
@@ -165,10 +171,11 @@ local function initPos()
     return UDim2.new(0,math.floor(vp.X/2-WW/2),0,math.floor(vp.Y/2-WH/2))
 end
 local Win=new("Frame",{Name="Window",AnchorPoint=Vector2.new(0,0),Position=initPos(),Size=UDim2.new(0,WW,0,WH),BackgroundColor3=T.B1,ClipsDescendants=true,ZIndex=10},SG)
-cr(12,Win); local winSt=st(T.A2,1.5,Win); table.insert(AL,function(c) winSt.Color=c end)
+cr(12,Win); local winSt=st(T.A2,1.5,Win)
+new("UIGradient",{Color=ColorSequence.new{ColorSequenceKeypoint.new(0,T.A),ColorSequenceKeypoint.new(0.5,Color3.fromRGB(200,100,255)),ColorSequenceKeypoint.new(1,T.A)},Rotation=90},winSt)
+table.insert(AL,function(c) winSt.Color=c end)
 
-local TBar=new("Frame",{Size=UDim2.new(1,0,0,54),BackgroundColor3=T.B0},Win); cr(12,TBar)
-new("Frame",{Position=UDim2.new(0,0,0.5,0),Size=UDim2.new(1,0,0.5,0),BackgroundColor3=T.B0},TBar)
+local TBar=new("Frame",{Size=UDim2.new(1,0,0,54),BackgroundColor3=T.B0},Win)
 new("Frame",{AnchorPoint=Vector2.new(0,1),Position=UDim2.new(0,0,1,0),Size=UDim2.new(1,0,0,1),BackgroundColor3=T.BD},TBar)
 local iconBg=new("Frame",{AnchorPoint=Vector2.new(0,0.5),Position=UDim2.new(0,11,0.5,0),Size=UDim2.new(0,36,0,36),BackgroundColor3=T.B0,ZIndex=2},TBar); cr(8,iconBg)
 local iconImg=new("ImageLabel",{AnchorPoint=Vector2.new(0.5,0.5),Position=UDim2.new(0.5,0,0.5,0),Size=UDim2.new(1,0,1,0),BackgroundTransparency=1,Image="",ScaleType=Enum.ScaleType.Fit,ZIndex=3,Visible=false},iconBg); cr(8,iconImg)
@@ -269,7 +276,9 @@ local function addTab(name)
     local btn=new("TextButton",{Size=UDim2.new(0,0,1,0),AutomaticSize=Enum.AutomaticSize.X,BackgroundTransparency=1,Text=name,TextColor3=T.MT,Font=Enum.Font.GothamBold,TextSize=14},tabList)
     pad(0,0,16,16,btn)
     local s=Instance.new("UIStroke"); s.Color=Color3.new(0,0,0); s.Thickness=1; s.ApplyStrokeMode=Enum.ApplyStrokeMode.Contextual; s.Parent=btn
-    local ul=new("Frame",{AnchorPoint=Vector2.new(0,1),Position=UDim2.new(0,0,1,0),Size=UDim2.new(1,0,0,2),BackgroundColor3=T.A,Visible=false},btn); cr(99,ul); table.insert(AL,function(c) ul.BackgroundColor3=c end)
+    local ul=new("Frame",{AnchorPoint=Vector2.new(0,1),Position=UDim2.new(0,0,1,0),Size=UDim2.new(1,0,0,2),BackgroundColor3=T.A,Visible=false},btn); cr(99,ul)
+    local ulGrad=new("UIGradient",{Color=ColorSequence.new{ColorSequenceKeypoint.new(0,T.A),ColorSequenceKeypoint.new(1,Color3.fromRGB(200,100,255))},Rotation=0},ul)
+    table.insert(AL,function(c) ul.BackgroundColor3=c; ulGrad.Color=ColorSequence.new{ColorSequenceKeypoint.new(0,c),ColorSequenceKeypoint.new(1,Color3.new(0.7,0.4,1))} end)
     local frame=new("Frame",{Size=UDim2.new(1,0,1,0),BackgroundTransparency=1,Visible=false},ContentArea)
     local function makeCol(xs,xo,wo)
         local col=new("ScrollingFrame",{Position=UDim2.new(xs,xo,0,6),Size=UDim2.new(0.5,wo,1,-12),BackgroundTransparency=1,BorderSizePixel=0,ScrollBarThickness=3,ScrollBarImageColor3=T.BD,CanvasSize=UDim2.new(0,0,0,0),AutomaticCanvasSize=Enum.AutomaticSize.Y},frame)
@@ -298,7 +307,12 @@ local function makeSection(parent,title)
 
     if title and title~="" then
         local hdr=new("TextButton",{Size=UDim2.new(1,0,0,32),BackgroundColor3=T.B2,LayoutOrder=0,Text="",ZIndex=2},body)
-        local acBar=new("Frame",{Size=UDim2.new(0,3,1,0),BackgroundColor3=T.A},hdr); table.insert(AL,function(c) acBar.BackgroundColor3=c end)
+        -- Gradient accent bar on the left
+        local acBar=new("Frame",{Size=UDim2.new(0,3,1,0),BackgroundColor3=T.A},hdr)
+        local acGrad=new("UIGradient",{Color=ColorSequence.new{ColorSequenceKeypoint.new(0,T.A),ColorSequenceKeypoint.new(1,Color3.fromRGB(200,100,255))},Rotation=90},acBar)
+        table.insert(AL,function(c) acBar.BackgroundColor3=c; acGrad.Color=ColorSequence.new{ColorSequenceKeypoint.new(0,c),ColorSequenceKeypoint.new(1,Color3.new(0.7,0.4,1))} end)
+        -- Subtle header background gradient
+        local hdrGrad=new("UIGradient",{Color=ColorSequence.new{ColorSequenceKeypoint.new(0,Color3.fromRGB(28,28,38)),ColorSequenceKeypoint.new(1,Color3.fromRGB(20,20,27))},Rotation=0},hdr)
         tl({Position=UDim2.new(0,12,0,0),Size=UDim2.new(1,-44,1,0),BackgroundTransparency=1,Text=title:upper(),TextColor3=Color3.fromRGB(200,160,230),Font=Enum.Font.GothamBold,TextSize=10,TextXAlignment=Enum.TextXAlignment.Left,ZIndex=3},hdr)
         new("Frame",{AnchorPoint=Vector2.new(0,1),Position=UDim2.new(0,0,1,0),Size=UDim2.new(1,0,0,1),BackgroundColor3=T.BD},hdr)
         if SECTION_ICON~="" then
@@ -371,36 +385,46 @@ local function makeSection(parent,title)
         -- Pill track
         local track=new("Frame",{AnchorPoint=Vector2.new(1,0.5),Position=UDim2.new(1,-10,0.5,0),Size=UDim2.new(0,44,0,24),BackgroundColor3=T.B0},row); cr(99,track)
         local trkSt=st(T.BD,1.5,track)
+        local trkGrad=new("UIGradient",{Color=ColorSequence.new{ColorSequenceKeypoint.new(0,T.A),ColorSequenceKeypoint.new(1,Color3.fromRGB(200,120,255))},Rotation=135,Enabled=false},track)
+        table.insert(AL,function(c) trkGrad.Color=ColorSequence.new{ColorSequenceKeypoint.new(0,c),ColorSequenceKeypoint.new(1,Color3.fromRGB(math.min(c.R*255+40,255)/255, c.G*255/255*0.6, math.min(c.B*255+80,255)/255))} end)
         -- Sliding knob
         local knob=new("Frame",{AnchorPoint=Vector2.new(0,0.5),Position=UDim2.new(0,3,0.5,0),Size=UDim2.new(0,18,0,18),BackgroundColor3=T.MT,ZIndex=2},track); cr(99,knob)
+        st(Color3.fromRGB(0,0,0),1,knob)
         local function upd(anim)
             local t=anim and 0.22 or 0
             local es=anim and Enum.EasingStyle.Back or Enum.EasingStyle.Quad
             if on then
+                trkGrad.Enabled=true
                 tw(track,{BackgroundColor3=T.A},t,Enum.EasingStyle.Quad)
                 tw(trkSt,{Color=T.A},t)
                 tw(knob,{Position=UDim2.new(1,-21,0.5,0),BackgroundColor3=Color3.new(1,1,1)},t,es)
             else
+                trkGrad.Enabled=false
                 tw(track,{BackgroundColor3=T.B0},t,Enum.EasingStyle.Quad)
                 tw(trkSt,{Color=T.BD},t)
                 tw(knob,{Position=UDim2.new(0,3,0.5,0),BackgroundColor3=T.MT},t,es)
             end
         end
         table.insert(AL,function(c) if on then track.BackgroundColor3=c; trkSt.Color=c end end)
+        -- Register this toggle so siblings with the same flag can be visually synced
+        if not togByFlag[flg] then togByFlag[flg] = {} end
+        local function _setOn(v, anim) on=v; upd(anim) end
+        table.insert(togByFlag[flg], _setOn)
+        local function _syncSiblings(v) for _,fn in ipairs(togByFlag[flg]) do pcall(fn,v,true) end end
         if cfg.Keybind then
             local kc=typeof(cfg.Keybind)=="EnumItem" and cfg.Keybind or Enum.KeyCode[tostring(cfg.Keybind)]
-            if kc then UIS.InputBegan:Connect(function(i) if not listeningForKey and i.KeyCode==kc then on=not on; Flags[flg]=on; upd(true); if cfg.Callback then cfg.Callback(on) end end end) end
+            if kc then UIS.InputBegan:Connect(function(i) if not listeningForKey and i.KeyCode==kc then on=not on; Flags[flg]=on; _syncSiblings(on); if cfg.Callback then cfg.Callback(on) end end end) end
         end
         local btn=new("TextButton",{Size=UDim2.new(1,0,1,0),BackgroundTransparency=1,Text="",ZIndex=2},row)
         btn.MouseEnter:Connect(function() tw(hbg,{BackgroundTransparency=0.82},0.1) end)
         btn.MouseLeave:Connect(function() tw(hbg,{BackgroundTransparency=1},0.1) end)
         btn.MouseButton1Click:Connect(function()
-            on=not on; Flags[flg]=on; upd(true)
+            on=not on; Flags[flg]=on; _syncSiblings(on)
             if cfg.Callback then cfg.Callback(on) end
         end)
         upd(false)
         return {
-            Set=function(v) on=v; Flags[flg]=v; upd(true) end,
+            Set=function(v) Flags[flg]=v; _syncSiblings(v) end,
             Get=function() return on end
         }
     end
@@ -458,7 +482,7 @@ local function makeSection(parent,title)
                     op.MouseButton1Click:Connect(function() Flags[flg]=item; selLbl.Text=item; closeDd(); if cfg.Callback then cfg.Callback(item) end end)
                 end
                 local h=#(cfg.Items or {})*26; tw(lf,{Size=UDim2.new(1,-20,0,h)},0.15); tw(wr,{Size=UDim2.new(1,0,0,56+h+2)},0.15)
-                task.delay(0.05,function() if not open then return end; oc=UIS.InputBegan:Connect(function(i) if i.UserInputType==Enum.UserInputType.MouseButton1 or i.UserInputType==Enum.UserInputType.Touch then closeDd() end end) end)
+                task.delay(0.05,function() if not open then return end; oc=UIS.InputBegan:Connect(function(i) if i.UserInputType==Enum.UserInputType.MouseButton1 or i.UserInputType==Enum.UserInputType.Touch then task.delay(0.05,function() closeDd() end) end end) end)
             else closeDd() end
         end)
         local obj={Get=function() return Flags[flg] end}; function obj:Rebuild(items) cfg.Items=items; Flags[flg]=items[1] or "(none)"; selLbl.Text=Flags[flg] end; return obj
@@ -530,9 +554,71 @@ local function makeSection(parent,title)
         local lbl=tl({Size=UDim2.new(1,0,0,22),BackgroundTransparency=1,Text=cfg.Name or "",TextColor3=T.MT,Font=Enum.Font.FredokaOne,TextSize=13,TextXAlignment=Enum.TextXAlignment.Left,LayoutOrder=nl()},body); pad(0,0,12,0,lbl)
     end
 
+    function api:AddLabel2(cfg)
+        -- Bold accent-colored label, used for section sub-headings
+        local lbl=tl({Size=UDim2.new(1,0,0,24),BackgroundTransparency=1,Text=cfg.Name or "",TextColor3=T.A,Font=Enum.Font.GothamBold,TextSize=13,TextXAlignment=Enum.TextXAlignment.Left,LayoutOrder=nl()},body); pad(0,0,12,0,lbl)
+        table.insert(AL,function(c) lbl.TextColor3=c end)
+    end
+
+    function api:AddESPPreview(cfg)
+        -- Live 2-D preview of ESP highlight appearance.
+        -- cfg keys: Flag_OutlineColor, Flag_FillColor, Flag_FillTransparency
+        local wr=new("Frame",{Size=UDim2.new(1,0,0,148),BackgroundTransparency=1,LayoutOrder=nl()},body)
+        -- Dark canvas
+        local canvas=new("Frame",{Position=UDim2.new(0,12,0,4),Size=UDim2.new(1,-24,0,136),BackgroundColor3=Color3.fromRGB(7,7,11)},wr)
+        cr(6,canvas); st(T.BD,1,canvas)
+        -- Subtle dot-grid
+        for gy=0,5 do for gx=0,8 do
+            new("Frame",{Position=UDim2.new(0,10+gx*15,0,10+gy*20),Size=UDim2.new(0,2,0,2),BackgroundColor3=Color3.fromRGB(40,40,55),BackgroundTransparency=0.4},canvas)
+        end end
+        -- Character silhouette group (centered)
+        local cg=new("Frame",{AnchorPoint=Vector2.new(0.5,0.5),Position=UDim2.new(0.5,0,0.5,0),Size=UDim2.new(0,56,0,100),BackgroundTransparency=1},canvas)
+        -- Floating name tag
+        local nameTag=tl({AnchorPoint=Vector2.new(0.5,0),Position=UDim2.new(0.5,0,0,0),Size=UDim2.new(0,56,0,12),BackgroundTransparency=1,Text="Player",TextColor3=Color3.new(1,1,1),Font=Enum.Font.GothamBold,TextSize=8},cg)
+        -- ESP box (the highlight)
+        local espBox=new("Frame",{Position=UDim2.new(0,0,0,14),Size=UDim2.new(1,0,1,-14),BackgroundColor3=Color3.fromRGB(255,80,80),BackgroundTransparency=1},cg)
+        local espStroke=st(Color3.fromRGB(255,80,80),1.5,espBox)
+        -- Body parts (flesh/clothes coloured so they look like a person)
+        local head=new("Frame",{AnchorPoint=Vector2.new(0.5,0),Position=UDim2.new(0.5,0,0,4),Size=UDim2.new(0,16,0,14),BackgroundColor3=Color3.fromRGB(210,170,120),BackgroundTransparency=0.1},espBox); cr(3,head)
+        local torso=new("Frame",{AnchorPoint=Vector2.new(0.5,0),Position=UDim2.new(0.5,0,0,22),Size=UDim2.new(0,20,0,26),BackgroundColor3=Color3.fromRGB(55,85,200),BackgroundTransparency=0.1},espBox)
+        local legL=new("Frame",{Position=UDim2.new(0,4,0,52),Size=UDim2.new(0,8,0,24),BackgroundColor3=Color3.fromRGB(40,55,140),BackgroundTransparency=0.1},espBox)
+        local legR=new("Frame",{Position=UDim2.new(0,16,0,52),Size=UDim2.new(0,8,0,24),BackgroundColor3=Color3.fromRGB(40,55,140),BackgroundTransparency=0.1},espBox)
+        -- Health bar
+        local hbBg=new("Frame",{Position=UDim2.new(0,-7,0,0),Size=UDim2.new(0,3,1,0),BackgroundColor3=Color3.fromRGB(25,25,30)},espBox); cr(2,hbBg)
+        local hbFill=new("Frame",{AnchorPoint=Vector2.new(0,1),Position=UDim2.new(0,0,1,0),Size=UDim2.new(1,0,0.72,0),BackgroundColor3=Color3.fromRGB(60,220,100)},hbBg); cr(2,hbFill)
+        new("UIGradient",{Color=ColorSequence.new{ColorSequenceKeypoint.new(0,Color3.fromRGB(30,200,80)),ColorSequenceKeypoint.new(1,Color3.fromRGB(80,255,120))}},hbFill)
+        -- Distance label at bottom
+        local distLbl=tl({AnchorPoint=Vector2.new(0.5,1),Position=UDim2.new(0.5,0,1,0),Size=UDim2.new(0,56,0,12),BackgroundTransparency=1,Text="42 studs",TextColor3=T.MT,Font=Enum.Font.Gotham,TextSize=8},cg)
+        -- "LIVE" indicator
+        local liveDot=new("Frame",{AnchorPoint=Vector2.new(1,0),Position=UDim2.new(1,-6,0,6),Size=UDim2.new(0,6,0,6),BackgroundColor3=Color3.fromRGB(60,220,100)},canvas); cr(99,liveDot)
+        tl({AnchorPoint=Vector2.new(1,0),Position=UDim2.new(1,-15,0,4),Size=UDim2.new(0,24,0,10),BackgroundTransparency=1,Text="LIVE",TextColor3=Color3.fromRGB(60,220,100),Font=Enum.Font.GothamBold,TextSize=7},canvas)
+        -- Pulse animation on liveDot
+        task.spawn(function()
+            while liveDot and liveDot.Parent do
+                tw(liveDot,{BackgroundTransparency=0.7},0.6); task.wait(0.6)
+                tw(liveDot,{BackgroundTransparency=0},0.6); task.wait(0.6)
+            end
+        end)
+        -- Refresh function: reads flags and updates visuals
+        local function refresh()
+            local outCol=(typeof(Flags[cfg.Flag_OutlineColor])=="Color3") and Flags[cfg.Flag_OutlineColor] or Color3.fromRGB(255,80,80)
+            local fillCol=(typeof(Flags[cfg.Flag_FillColor])=="Color3") and Flags[cfg.Flag_FillColor] or Color3.fromRGB(255,80,80)
+            local fillTrans=type(Flags[cfg.Flag_FillTransparency])=="number" and Flags[cfg.Flag_FillTransparency] or 1
+            espStroke.Color=outCol; nameTag.TextColor3=outCol; distLbl.TextColor3=outCol
+            espBox.BackgroundColor3=fillCol; espBox.BackgroundTransparency=fillTrans
+        end
+        -- Auto-poll every 0.1s so it stays live
+        task.spawn(function()
+            while wr and wr.Parent do pcall(refresh); task.wait(0.1) end
+        end)
+        refresh()
+        return {Refresh=refresh}
+    end
+
     function api:AddDivider()
-        local wr=new("Frame",{Size=UDim2.new(1,0,0,10),BackgroundTransparency=1,LayoutOrder=nl()},body)
-        new("Frame",{AnchorPoint=Vector2.new(0,0.5),Position=UDim2.new(0,10,0.5,0),Size=UDim2.new(1,-20,0,1),BackgroundColor3=T.BD},wr)
+        local wr=new("Frame",{Size=UDim2.new(1,0,0,12),BackgroundTransparency=1,LayoutOrder=nl()},body)
+        local line=new("Frame",{AnchorPoint=Vector2.new(0,0.5),Position=UDim2.new(0,10,0.5,0),Size=UDim2.new(1,-20,0,1),BackgroundColor3=T.BD},wr)
+        new("UIGradient",{Color=ColorSequence.new{ColorSequenceKeypoint.new(0,Color3.new(0,0,0)),ColorSequenceKeypoint.new(0.15,Color3.fromRGB(255,255,255)),ColorSequenceKeypoint.new(0.85,Color3.fromRGB(255,255,255)),ColorSequenceKeypoint.new(1,Color3.new(0,0,0))},Transparency=NumberSequence.new{NumberSequenceKeypoint.new(0,1),NumberSequenceKeypoint.new(0.1,0),NumberSequenceKeypoint.new(0.9,0),NumberSequenceKeypoint.new(1,1)}},line)
     end
 
     function api:AddKeybind(cfg)
