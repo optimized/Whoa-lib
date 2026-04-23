@@ -176,6 +176,7 @@ new("UIGradient",{Color=ColorSequence.new{ColorSequenceKeypoint.new(0,T.A),Color
 table.insert(AL,function(c) winSt.Color=c end)
 
 local TBar=new("Frame",{Size=UDim2.new(1,0,0,54),BackgroundColor3=T.B0},Win)
+cr(12,TBar)   -- ← ADD THIS
 new("Frame",{AnchorPoint=Vector2.new(0,1),Position=UDim2.new(0,0,1,0),Size=UDim2.new(1,0,0,1),BackgroundColor3=T.BD},TBar)
 local iconBg=new("Frame",{AnchorPoint=Vector2.new(0,0.5),Position=UDim2.new(0,11,0.5,0),Size=UDim2.new(0,36,0,36),BackgroundColor3=T.B0,ZIndex=2},TBar); cr(8,iconBg)
 local iconImg=new("ImageLabel",{AnchorPoint=Vector2.new(0.5,0.5),Position=UDim2.new(0.5,0,0.5,0),Size=UDim2.new(1,0,1,0),BackgroundTransparency=1,Image="",ScaleType=Enum.ScaleType.Fit,ZIndex=3,Visible=false},iconBg); cr(8,iconImg)
