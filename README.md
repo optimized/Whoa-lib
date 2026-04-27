@@ -40,10 +40,18 @@ UI.Setup({
 | `Name` | string | Window title and watermark name |
 | `Version` | string | Shown in the watermark |
 | `Icon` | string | Roblox asset ID for the title bar icon |
-| `Snow` | bool | Enable snow particles |
+| `Snow` | bool | Enable snow particles and background overlay |
 | `Keys` | table | List of valid keys. Remove this field entirely to skip the key system |
-| `KeyURL` | string | Copied to clipboard when user clicks "Get Key" |
+| `KeyURL` | string | Copied to clipboard when user clicks "Get Key". A "Copied link!" confirmation appears below the modal |
 | `KeyPersist` | bool | `true` = key saved after first entry. `false` = required every run |
+
+### Loader
+
+When `UI.Setup()` is called, an animated letter-by-letter intro screen plays automatically before the UI appears. No extra configuration needed — it reads `Name` automatically.
+
+### Keybind Tip
+
+After the loader finishes, a notification automatically appears in the bottom-right corner telling the user which key opens/closes the UI. This updates automatically if the toggle key is changed.
 
 ---
 
@@ -66,7 +74,7 @@ local sec = UI.MakeSection(colL, "Section Title")
 sec._tabName(tabName, tabSwitch)  -- required for search to work
 ```
 
-Pass `""` as the title for a section with no header.
+Pass `""` as the title for a section with no header. Sections are collapsible by clicking the header.
 
 ---
 
@@ -164,7 +172,7 @@ sec:AddKeybind({
 })
 ```
 
-> **Tip:** Use `Flag = "tkey"` to automatically update the UI toggle key.
+> **Tip:** Use `Flag = "tkey"` to automatically update the UI toggle key when the user rebinds it.
 
 #### Label
 ```lua
@@ -203,6 +211,7 @@ UI.Notify("Title", "Body text", "Success", 3)
 | `"Success"` | Green |
 | `"Error"` | Red |
 | `"Warning"` | Orange |
+| `"Info"` | Accent pink (default) |
 
 Duration is in seconds. Omit it to use the default (3s).
 
@@ -218,6 +227,23 @@ Updates every accent-colored element instantly.
 
 ---
 
+## Snow & Overlay
+
+```lua
+UI.StartSnow()   -- shows snow particles + dark background overlay
+UI.StopSnow()    -- hides snow particles AND the background overlay
+```
+
+> **Note:** `StopSnow()` also hides the dark background overlay. `StartSnow()` brings it back.
+
+You can control the overlay independently:
+```lua
+UI.SetOverlay(true)   -- show overlay
+UI.SetOverlay(false)  -- hide overlay
+```
+
+---
+
 ## Config System
 
 Save and load flag states between sessions:
@@ -229,15 +255,6 @@ UI.DeleteConfig("myconfig")     -- delete a saved config
 UI.ListConfigs()                -- returns table of saved config names
 UI.SetAutoLoad("myconfig")      -- auto-loads this config on next run
 UI.GetAutoLoad()                -- returns the current auto-load name
-```
-
----
-
-## Snow
-
-```lua
-UI.StartSnow()
-UI.StopSnow()
 ```
 
 ---
@@ -263,13 +280,15 @@ UI.Setup({
     Keys       = {"mykey"},
     KeyURL     = "https://discord.gg/yourserver",
     KeyPersist = true,
+    Snow       = true,
 })
 
--- Tab
+-- Tabs
 local colL, colR, tabName, tabSwitch = UI.AddTab("Main")
+local sL, sR, sTab, sSwitch = UI.AddTab("Settings")
 
 -- Section
-local sec = UI.MakeSection(colL, "Settings")
+local sec = UI.MakeSection(colL, "Features")
 sec._tabName(tabName, tabSwitch)
 
 -- Elements
@@ -282,7 +301,7 @@ sec:AddToggle({
 
 sec:AddSlider({
     Name = "Speed", Flag = "spdval",
-    Min = 16, Max = 500, Default = 16, Decimals = 0,
+    Min = 16, Max = 500, Default = 60, Decimals = 0,
     Callback = function(v)
         -- your code here
     end,
@@ -295,5 +314,26 @@ sec:AddButton({
     end,
 })
 
-UI.Notify("My Script", "Loaded!", "Success", 3)
+-- Settings tab
+local uiSec = UI.MakeSection(sL, "UI")
+uiSec._tabName(sTab, sSwitch)
+
+uiSec:AddKeybind({ Name = "Toggle UI",  Flag = "tkey", Default = Enum.KeyCode.RightShift })
+uiSec:AddCheckbox({ Name = "Watermark", Flag = "wm",   Default = true, Callback = function(v) UI.wmFrame.Visible = v end })
+uiSec:AddCheckbox({ Name = "Snow",      Flag = "snow", Default = true, Callback = function(v) if v then UI.StartSnow() else UI.StopSnow() end end })
+
+local themeSec = UI.MakeSection(sR, "Theme")
+themeSec._tabName(sTab, sSwitch)
+
+themeSec:AddColorPicker({
+    Name = "Accent Color", Flag = "accent",
+    Default = Color3.fromRGB(255, 182, 215),
+    Callback = function(c) UI.SetAccent(c) end,
+})
+themeSec:AddButton({
+    Name = "Reset Accent",
+    Callback = function() UI.SetAccent(Color3.fromRGB(255, 182, 215)) end,
+})
+
+UI.Notify("My Script", "Loaded successfully!", "Success", 3)
 ```
