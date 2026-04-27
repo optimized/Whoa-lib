@@ -724,6 +724,246 @@ local function makeSection(parent,title)
         local wr=new("Frame",{Size=UDim2.new(1,0,0,10),BackgroundTransparency=1,LayoutOrder=nl()},body)
         new("Frame",{AnchorPoint=Vector2.new(0,0.5),Position=UDim2.new(0,10,0.5,0),Size=UDim2.new(1,-20,0,1),BackgroundColor3=T.BD,BackgroundTransparency=0.5},wr)
     end
+
+    function api:AddCanvas(cfg)
+        -- Returns a raw Frame you can parent anything into
+        -- cfg.Height = fixed pixel height (optional, default auto)
+        -- cfg.Color  = background color (optional, default transparent)
+        local h = cfg and cfg.Height or 0
+        local autoSize = h == 0
+        local wr = new("Frame", {
+            Size = autoSize and UDim2.new(1,0,0,0) or UDim2.new(1,0,0,h),
+            AutomaticSize = autoSize and Enum.AutomaticSize.Y or Enum.AutomaticSize.None,
+            BackgroundColor3 = (cfg and cfg.Color) or T.BG,
+            BackgroundTransparency = (cfg and cfg.Color) and 0 or 1,
+            ClipsDescendants = cfg and cfg.Clip or false,
+            LayoutOrder = nl(),
+        }, body)
+        if cfg and cfg.Radius then cr(cfg.Radius, wr) end
+        return wr
+    end
+
+    function api:AddScrollList(cfg)
+        -- cfg.Height    = pixel height of the list frame (required)
+        -- cfg.ItemHeight= pixel height per row (default 36)
+        -- cfg.OnSelect  = function(entry) called when row clicked
+        -- Returns { frame, AddRow=fn, Clear=fn }
+        local itemH = cfg.ItemHeight or 36
+        local wr = new("Frame", {
+            Size = UDim2.new(1,0,0,cfg.Height or 200),
+            BackgroundColor3 = T.BG,
+            ClipsDescendants = true,
+            LayoutOrder = nl(),
+        }, body)
+        cr(4, wr)
+        local sf = new("ScrollingFrame", {
+            Size = UDim2.new(1,0,1,0),
+            BackgroundTransparency = 1,
+            BorderSizePixel = 0,
+            ScrollBarThickness = 3,
+            ScrollBarImageColor3 = T.A,
+            CanvasSize = UDim2.new(0,0,0,0),
+            AutomaticCanvasSize = Enum.AutomaticSize.Y,
+        }, wr)
+        new("UIListLayout", {SortOrder=Enum.SortOrder.LayoutOrder, Padding=UDim.new(0,2)}, sf)
+        pad(2,2,2,2,sf)
+        table.insert(AL, function(c) sf.ScrollBarImageColor3=c end)
+
+        local rows = {}
+        local selectedRow = nil
+
+        local obj = {}
+
+        function obj.AddRow(rowCfg)
+            -- rowCfg.Label    = main text
+            -- rowCfg.Sub      = smaller subtext (optional)
+            -- rowCfg.Tag      = right-aligned badge text (optional)
+            -- rowCfg.Color    = accent color for left pip (optional)
+            -- rowCfg.Data     = anything, passed to OnSelect
+            local lo = #rows + 1
+            local rowColor = rowCfg.Color or T.A
+            local row = new("Frame", {
+                Size = UDim2.new(1,0,0,itemH),
+                BackgroundColor3 = T.B2,
+                LayoutOrder = lo,
+            }, sf)
+            cr(4, row)
+
+            local pip = new("Frame", {
+                Position = UDim2.new(0,0,0.15,0),
+                Size = UDim2.new(0,3,0.7,0),
+                BackgroundColor3 = rowColor,
+            }, row)
+            cr(99, pip)
+
+            tl({
+                Position = UDim2.new(0,10,0,5),
+                Size = UDim2.new(1,-50,0,14),
+                BackgroundTransparency = 1,
+                Text = rowCfg.Label or "",
+                TextColor3 = T.TX,
+                TextSize = 12,
+                TextXAlignment = Enum.TextXAlignment.Left,
+                TextTruncate = Enum.TextTruncate.AtEnd,
+            }, row)
+
+            if rowCfg.Sub then
+                tl({
+                    Position = UDim2.new(0,10,0,20),
+                    Size = UDim2.new(0.75,0,0,10),
+                    BackgroundTransparency = 1,
+                    Text = rowCfg.Sub,
+                    TextColor3 = T.MT,
+                    TextSize = 9,
+                    TextXAlignment = Enum.TextXAlignment.Left,
+                }, row)
+            end
+
+            if rowCfg.Tag then
+                tl({
+                    AnchorPoint = Vector2.new(1,0),
+                    Position = UDim2.new(1,-6,0,5),
+                    Size = UDim2.new(0,40,0,10),
+                    BackgroundTransparency = 1,
+                    Text = rowCfg.Tag,
+                    TextColor3 = rowColor,
+                    TextSize = 9,
+                    TextXAlignment = Enum.TextXAlignment.Right,
+                }, row)
+            end
+
+            local btn = new("TextButton", {
+                Size = UDim2.new(1,0,1,0),
+                BackgroundTransparency = 1,
+                Text = "",
+                ZIndex = 2,
+            }, row)
+
+            local selLine = new("Frame", {
+                Position = UDim2.new(0,0,0.1,0),
+                Size = UDim2.new(0,2,0.8,0),
+                BackgroundColor3 = rowColor,
+                Visible = false,
+            }, row)
+            cr(99, selLine)
+
+            btn.MouseEnter:Connect(function()
+                if selectedRow ~= row then tw(row,{BackgroundColor3=T.B3},0.07) end
+            end)
+            btn.MouseLeave:Connect(function()
+                if selectedRow ~= row then tw(row,{BackgroundColor3=T.B2},0.07) end
+            end)
+            btn.MouseButton1Click:Connect(function()
+                if selectedRow and selectedRow ~= row then
+                    tw(selectedRow,{BackgroundColor3=T.B2},0.1)
+                    for _,r in ipairs(rows) do
+                        if r.frame == selectedRow then r.selLine.Visible=false end
+                    end
+                end
+                selectedRow = row
+                tw(row,{BackgroundColor3=T.B3},0.1)
+                selLine.Visible = true
+                if cfg.OnSelect then cfg.OnSelect(rowCfg.Data) end
+            end)
+
+            local entry = {frame=row, selLine=selLine, data=rowCfg.Data}
+            table.insert(rows, entry)
+            return entry
+        end
+
+        function obj.Clear()
+            for _,r in ipairs(rows) do
+                if r.frame and r.frame.Parent then r.frame:Destroy() end
+            end
+            rows = {}
+            selectedRow = nil
+        end
+
+        function obj.GetFrame() return sf end
+
+        return obj
+    end
+
+    function api:AddCodeBlock(cfg)
+        -- cfg.Height = pixel height (default 180)
+        -- Returns { SetCode=fn(rawText), GetFrame=fn }
+        local h = cfg and cfg.Height or 180
+        local wr = new("Frame", {
+            Size = UDim2.new(1,0,0,h),
+            BackgroundColor3 = T.BG,
+            ClipsDescendants = true,
+            LayoutOrder = nl(),
+        }, body)
+        cr(4, wr)
+        st(T.BD, 1, wr)
+
+        -- Line number column
+        local lineCol = new("Frame", {
+            Size = UDim2.new(0,28,1,0),
+            BackgroundColor3 = T.B1,
+        }, wr)
+        new("Frame", {
+            Position = UDim2.new(1,-1,0,0),
+            Size = UDim2.new(0,1,1,0),
+            BackgroundColor3 = T.BD,
+        }, lineCol)
+        local lineNums = tl({
+            Position = UDim2.new(0,0,0,6),
+            Size = UDim2.new(1,-4,1,-6),
+            BackgroundTransparency = 1,
+            Text = "1",
+            TextColor3 = T.MT,
+            Font = Enum.Font.Code,
+            TextSize = 10,
+            TextXAlignment = Enum.TextXAlignment.Right,
+            TextYAlignment = Enum.TextYAlignment.Top,
+        }, lineCol)
+
+        local sf = new("ScrollingFrame", {
+            Position = UDim2.new(0,28,0,0),
+            Size = UDim2.new(1,-28,1,0),
+            BackgroundTransparency = 1,
+            BorderSizePixel = 0,
+            ScrollBarThickness = 3,
+            ScrollBarImageColor3 = T.BD,
+            CanvasSize = UDim2.new(0,600,0,0),
+            AutomaticCanvasSize = Enum.AutomaticSize.Y,
+            ScrollingDirection = Enum.ScrollingDirection.XY,
+        }, wr)
+
+        local codeLbl = tl({
+            Size = UDim2.new(0,1200,0,0),
+            AutomaticSize = Enum.AutomaticSize.Y,
+            BackgroundTransparency = 1,
+            Text = '<font color="rgb(75,80,105)">-- no code selected</font>',
+            TextColor3 = T.TX,
+            Font = Enum.Font.Code,
+            TextSize = 10,
+            TextXAlignment = Enum.TextXAlignment.Left,
+            TextYAlignment = Enum.TextYAlignment.Top,
+            RichText = true,
+            TextWrapped = false,
+        }, sf)
+        pad(6,6,6,6,codeLbl)
+
+        local obj = {}
+
+        function obj.SetCode(raw, highlighted)
+            if not raw or raw == "" then return end
+            local n = 1
+            for _ in raw:gmatch("\n") do n+=1 end
+            local nums = {}
+            for i=1,n do nums[i]=tostring(i) end
+            lineNums.Text = table.concat(nums,"\n")
+            codeLbl.Text = highlighted or raw
+            sf.CanvasPosition = Vector2.zero
+        end
+
+        function obj.GetFrame() return sf end
+
+        return obj
+    end
+
     function api:AddKeybind(cfg)
         local flg=cfg.Flag or cfg.Name
         local cur=Flags[flg] or cfg.Default or Enum.KeyCode.RightShift; Flags[flg]=cur
