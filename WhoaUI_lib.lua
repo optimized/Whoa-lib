@@ -446,9 +446,10 @@ local function makeSection(parent,title)
                 sec.Size=UDim2.new(1,0,0,contentH)
                 tw(sec,{Size=UDim2.new(1,0,0,28)},0.2,Enum.EasingStyle.Quint)
             else
+                local targetH=body.AbsoluteSize.Y
                 sec.AutomaticSize=Enum.AutomaticSize.None
                 sec.Size=UDim2.new(1,0,0,28)
-                tw(sec,{Size=UDim2.new(1,0,0,500)},0.2,Enum.EasingStyle.Quint)
+                tw(sec,{Size=UDim2.new(1,0,0,math.max(targetH,29))},0.2,Enum.EasingStyle.Quint)
                 task.delay(0.22,function()
                     if not collapsed then
                         sec.AutomaticSize=Enum.AutomaticSize.Y
@@ -580,12 +581,14 @@ local function makeSection(parent,title)
         local open,lf,oc=false,nil,nil
         local function closeDd()
             if not open then return end; open=false
+            body.Parent.ClipsDescendants=true
             if oc then oc:Disconnect(); oc=nil end
             if lf then tw(lf,{Size=UDim2.new(1,-20,0,0)},0.12); tw(wr,{Size=UDim2.new(1,0,0,50)},0.12); task.delay(0.13,function() if lf then lf:Destroy(); lf=nil end end) end
         end
         sb.MouseButton1Click:Connect(function()
             open=not open
             if open then
+                body.Parent.ClipsDescendants=false
                 lf=new("Frame",{Position=UDim2.new(0,10,0,48),Size=UDim2.new(1,-20,0,0),BackgroundColor3=T.B1,ClipsDescendants=true,ZIndex=20},wr); cr(4,lf); st(T.BD,1,lf)
                 new("UIListLayout",{SortOrder=Enum.SortOrder.LayoutOrder},lf)
                 for _,item in ipairs(cfg.Items or {}) do
