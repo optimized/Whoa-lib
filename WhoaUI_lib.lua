@@ -203,6 +203,8 @@ for i=1,28 do
 end
 local function startSnow()
     if snowConn then return end
+    snowCont.Visible=true
+    if overlayEnabled then bgOverlay.Visible=true end
     snowConn=RS.Heartbeat:Connect(function(dt)
         for _,fl in ipairs(flakes) do
             fl.y+=fl.spd*dt; fl.x+=fl.dx
@@ -212,7 +214,12 @@ local function startSnow()
         end
     end)
 end
-local function stopSnow() if snowConn then snowConn:Disconnect(); snowConn=nil end end
+local function stopSnow()
+    if snowConn then snowConn:Disconnect(); snowConn=nil end
+    snowCont.Visible=false
+    bgOverlay.Visible=false
+    for _,fl in ipairs(flakes) do fl.ui.Position=UDim2.new(2,0,2,0) end
+end
 
 -- WINDOW
 local WW,WH=WIN_WIDTH,WIN_HEIGHT
@@ -243,14 +250,12 @@ st(Color3.fromRGB(38,38,54),1.2,Win)
 -- TITLE BAR
 local TBar=new("Frame",{Position=UDim2.new(0,0,0,0),Size=UDim2.new(1,0,0,56),BackgroundColor3=T.B1,ZIndex=11},WinInner)
 cr(10,TBar) -- matches window corner radius so top-left/right corners are rounded
--- Cover bottom half of TBar's own corners so only the top two are rounded
-new("Frame",{Position=UDim2.new(0,0,1,-10),Size=UDim2.new(1,0,0,10),BackgroundColor3=T.B1,ZIndex=11},TBar)
-
 -- Separator under title bar - thicker, more pastel
 local titleSep=new("Frame",{
     AnchorPoint=Vector2.new(0,1),Position=UDim2.new(0,0,1,0),
     Size=UDim2.new(1,0,0,2),BackgroundColor3=Color3.fromRGB(255,205,228),
     BackgroundTransparency=0.3,ZIndex=12,
+    Visible=false,
 },TBar)
 table.insert(AL,function(c)
     local h,s,v=Color3.toHSV(c)
@@ -277,7 +282,7 @@ mb.MouseEnter:Connect(function() tw(mb,{BackgroundColor3=T.B4}); tw(mbBar,{Backg
 mb.MouseLeave:Connect(function() tw(mb,{BackgroundColor3=T.B3}); tw(mbBar,{BackgroundColor3=T.MT}) end)
 mb.MouseButton1Click:Connect(function()
     winMin=not winMin
-    tw(Win,{Size=winMin and UDim2.new(0,WW,0,48) or UDim2.new(0,WW,0,WH)},0.22,Enum.EasingStyle.Quint)
+    tw(Win,{Size=winMin and UDim2.new(0,WW,0,56) or UDim2.new(0,WW,0,WH)},0.22,Enum.EasingStyle.Quint)
 end)
 
 -- DRAG
@@ -322,8 +327,8 @@ local function scaleWindow()
     local s=math.clamp(math.min(vp.X/1280,vp.Y/720),0.45,1.0)
     local sw,sh=math.floor(baseW*s),math.floor(baseH*s)
     WW=sw; WH=sh
-    Win.Size=winMin and UDim2.new(0,sw,0,51) or UDim2.new(0,sw,0,sh)
-    Win.Position=getCenterPos(sw,winMin and 51 or sh)
+    Win.Size=winMin and UDim2.new(0,sw,0,56) or UDim2.new(0,sw,0,sh)
+    Win.Position=getCenterPos(sw,winMin and 56 or sh)
 end
 scaleWindow()
 workspace.CurrentCamera:GetPropertyChangedSignal("ViewportSize"):Connect(scaleWindow)
@@ -802,6 +807,87 @@ local function showLoadingScreen()
 end
 
 -- SETUP
+-- LOADER
+local function showLoader(name, onDone)
+    local TS2 = game:GetService("TweenService")
+    local function tw2(o,p,t,s) TS2:Create(o,TweenInfo.new(t or 0.45,s or Enum.EasingStyle.Quint,Enum.EasingDirection.Out),p):Play() end
+
+    local loaderGui = Instance.new("ScreenGui",SG.Parent or LP.PlayerGui)
+    loaderGui.Name = "WhoaLoader"; loaderGui.ResetOnSpawn = false; loaderGui.IgnoreGuiInset = true; loaderGui.ZIndexBehavior = Enum.ZIndexBehavior.Global; loaderGui.DisplayOrder = 999
+
+    local blur = Instance.new("BlurEffect", game:GetService("Lighting")); blur.Size = 0
+    tw2(blur, {Size=48}, 0.8)
+
+    local black = Instance.new("Frame", loaderGui)
+    black.Size = UDim2.new(1,0,1,0); black.BackgroundColor3 = Color3.new(0,0,0); black.BackgroundTransparency = 1; black.BorderSizePixel = 0
+    tw2(black, {BackgroundTransparency=0.65}, 0.5)
+
+    local textHolder = Instance.new("Frame", loaderGui)
+    textHolder.AnchorPoint = Vector2.new(0.5,0.5); textHolder.Position = UDim2.new(0.5,0,0.5,0)
+    textHolder.Size = UDim2.new(1,0,0,200); textHolder.BackgroundTransparency = 1; textHolder.BorderSizePixel = 0
+    local layout = Instance.new("UIListLayout", textHolder)
+    layout.FillDirection = Enum.FillDirection.Horizontal
+    layout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+    layout.VerticalAlignment = Enum.VerticalAlignment.Center
+    layout.Padding = UDim.new(0, 2)
+    layout.SortOrder = Enum.SortOrder.LayoutOrder
+
+    local letters = {}
+    for char in name:gmatch(".") do
+        local frame = Instance.new("Frame", textHolder)
+        frame.BackgroundTransparency = 1; frame.BorderSizePixel = 0
+        frame.Size = UDim2.new(0, 60, 0, 120)
+
+        local lbl = Instance.new("TextLabel", frame)
+        lbl.AnchorPoint = Vector2.new(0.5,0.5); lbl.Position = UDim2.new(0.5,0,0.5,0)
+        lbl.Size = UDim2.new(2,0,1,0); lbl.BackgroundTransparency = 1; lbl.BorderSizePixel = 0
+        lbl.Text = char; lbl.Font = Enum.Font.GothamBold; lbl.TextSize = 72
+        lbl.TextColor3 = Color3.new(1,1,1); lbl.TextTransparency = 1
+        local grad = Instance.new("UIGradient", lbl)
+        grad.Color = ColorSequence.new{
+            ColorSequenceKeypoint.new(0, T.A),
+            ColorSequenceKeypoint.new(1, Color3.fromRGB(200,100,180))
+        }
+        grad.Rotation = 88
+        local scale = Instance.new("UIScale", lbl); scale.Scale = 1
+        table.insert(letters, {lbl=lbl, scale=scale, frame=frame})
+    end
+
+    task.wait(0.3)
+
+    -- Animate first letter big then shrink into position
+    local first = letters[1]
+    if first then
+        first.lbl.TextTransparency = 0
+        first.scale.Scale = 4
+        tw2(first.scale, {Scale=1}, 0.55, Enum.EasingStyle.Back)
+        task.wait(0.4)
+    end
+
+    -- Pop in remaining letters
+    for i = 2, #letters do
+        local l = letters[i]
+        l.lbl.Position = UDim2.new(0.5,0,0.5,80)
+        tw2(l.lbl, {TextTransparency=0, Position=UDim2.new(0.5,0,0.5,0)}, 0.4, Enum.EasingStyle.Back)
+        task.wait(0.06)
+    end
+
+    task.wait(1.2)
+
+    -- Fade out
+    for _, l in ipairs(letters) do
+        tw2(l.lbl, {TextTransparency=1}, 0.5)
+    end
+    tw2(blur, {Size=0}, 0.8)
+    tw2(black, {BackgroundTransparency=1}, 0.7)
+    task.wait(0.8)
+
+    loaderGui:Destroy()
+    blur:Destroy()
+    if onDone then onDone() end
+end
+
+-- SETUP
 local function Setup(cfg)
     cfg=cfg or {}
     if cfg.Name then SCRIPT_NAME=cfg.Name; titleLabel.Text=cfg.Name; wmScript.Text=cfg.Name end
@@ -817,11 +903,18 @@ local function Setup(cfg)
     end
     local keys=cfg.Keys or {}; local keyURL=cfg.KeyURL or ""; local keyFile=cfg.KeyFile or "WhoaKey.txt"; local persist=cfg.KeyPersist~=false
     local function revealUI()
-        uiReady=true
-        Win.Visible=true
-        if overlayEnabled then bgOverlay.Visible=true end
-        if WM_SHOW then wmFrame.Visible=true end
-        snowCont.Visible=true
+        task.spawn(function()
+            showLoader(SCRIPT_NAME, function()
+                uiReady=true
+                Win.Visible=true
+                if overlayEnabled then bgOverlay.Visible=true end
+                if WM_SHOW then wmFrame.Visible=true end
+                snowCont.Visible=true
+                task.delay(0.5,function()
+                    Notify("Tip", "Press "..toggleKey.Name.." to open / close the UI", "Info", 5)
+                end)
+            end)
+        end)
     end
     if #keys==0 then revealUI(); return end
     local unlocked=false
@@ -862,7 +955,13 @@ local function Setup(cfg)
     getBtn.MouseLeave:Connect(function() tw(gSt,{Color=T.BD}) end)
     ki.Focused:Connect(function() tw(iSt,{Color=T.A,Thickness=1.5}) end)
     ki.FocusLost:Connect(function() tw(iSt,{Color=T.BD,Thickness=1}) end)
-    getBtn.MouseButton1Click:Connect(function() pcall(function() if setclipboard then setclipboard(keyURL) end end) end)
+    local copiedLbl=tl({AnchorPoint=Vector2.new(0.5,0),Position=UDim2.new(0.5,0,1,8),Size=UDim2.new(1,0,0,30),BackgroundTransparency=1,Text="Copied link!",TextColor3=T.A,TextSize=22,TextTransparency=1,ZIndex=203},md)
+table.insert(AL,function(c) copiedLbl.TextColor3=c end)
+getBtn.MouseButton1Click:Connect(function()
+    pcall(function() if setclipboard then setclipboard(keyURL) end end)
+    copiedLbl.TextTransparency=0
+    tw(copiedLbl,{TextTransparency=1},1.5)
+end)
     authBtn.MouseEnter:Connect(function() tw(authBtn,{BackgroundTransparency=0.15}) end)
     authBtn.MouseLeave:Connect(function() tw(authBtn,{BackgroundTransparency=0}) end)
     local function tryKey()
