@@ -203,7 +203,7 @@ local uiSec = UI.MakeSection(sL, "UI")
 uiSec._tabName(sTab, sSwitch)
 
 -- Flag "tkey" auto-updates the toggle keybind
-uiSec:AddKeybind({ Name = "Toggle UI",  Flag = "tkey", Default = Enum.KeyCode.RightShift })
+uiSec:AddKeybind({ Name = "Toggle UI",  Flag = "RightShift", Default = Enum.KeyCode.RightShift })
 uiSec:AddCheckbox({ Name = "Watermark", Flag = "wm",   Default = true,  Callback = function(v) UI.wmFrame.Visible = v end })
 -- StopSnow hides both snow particles and the dark overlay; StartSnow brings both back
 uiSec:AddCheckbox({ Name = "Snow",      Flag = "snow", Default = true,  Callback = function(v) if v then UI.StartSnow() else UI.StopSnow() end end })
