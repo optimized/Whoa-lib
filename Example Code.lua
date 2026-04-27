@@ -26,7 +26,6 @@ local sL, sR, sTab, sSwitch = UI.AddTab("Settings")
 --  ACTIONS TAB
 -- ══════════════════════════════════════════════════
 
--- Left: Feature showcase
 local featSec = UI.MakeSection(aL, "Features")
 featSec._tabName(aTab, aSwitch)
 
@@ -50,9 +49,13 @@ featSec:AddToggle({
         if v then
             _G.ncConn = RunService.Stepped:Connect(function()
                 if not UI.Flags["noclip"] then return end
-                if lp.Character then for _,p in ipairs(lp.Character:GetDescendants()) do if p:IsA("BasePart") then p.CanCollide=false end end end
+                if lp.Character then
+                    for _,p in ipairs(lp.Character:GetDescendants()) do
+                        if p:IsA("BasePart") then p.CanCollide = false end
+                    end
+                end
             end)
-        elseif _G.ncConn then _G.ncConn:Disconnect(); _G.ncConn=nil end
+        elseif _G.ncConn then _G.ncConn:Disconnect(); _G.ncConn = nil end
     end,
 })
 
@@ -60,7 +63,7 @@ featSec:AddCheckbox({ Name = "Show Notifications", Flag = "notifs", Default = tr
 featSec:AddDivider()
 
 featSec:AddButton({
-    Name = "Send Test Notification",
+    Name = "Send Test Notifications",
     Callback = function()
         UI.Notify("WhoaUI", "This is a success notification!", "Success", 3)
         task.wait(1)
@@ -121,7 +124,7 @@ inputSec:AddColorPicker({
     Name = "Highlight Color", Flag = "hlcol",
     Default = Color3.fromRGB(255, 80, 80),
     Callback = function(c)
-        -- example: update your highlight color
+        -- use c here
     end,
 })
 
@@ -139,7 +142,7 @@ spdSec:AddToggle({
             _G.spdConn = RunService.Heartbeat:Connect(function(dt)
                 if not UI.Flags["spd"] then return end
                 local hrp = getHRP(); if not hrp then return end
-                local spd = UI.Flags["spdval"] or 60
+                local spd  = UI.Flags["spdval"] or 60
                 local move = Vector3.zero
                 local cam  = workspace.CurrentCamera
                 if UIS:IsKeyDown(Enum.KeyCode.W) then move += Vector3.new(0,0,-1) end
@@ -150,45 +153,45 @@ spdSec:AddToggle({
                 local flat = CFrame.new(Vector3.zero, Vector3.new(cam.CFrame.LookVector.X,0,cam.CFrame.LookVector.Z))
                 hrp.CFrame = hrp.CFrame + flat:VectorToWorldSpace(move.Unit) * spd * dt
             end)
-        elseif _G.spdConn then _G.spdConn:Disconnect(); _G.spdConn=nil end
+        elseif _G.spdConn then _G.spdConn:Disconnect(); _G.spdConn = nil end
     end,
 })
 
-spdSec:AddSlider({ Name="Speed Value", Flag="spdval", Min=16, Max=500, Default=60, Decimals=0 })
+spdSec:AddSlider({ Name = "Speed Value", Flag = "spdval", Min = 16, Max = 500, Default = 60, Decimals = 0 })
 
 local statSec = UI.MakeSection(mL, "Character")
 statSec._tabName(mTab, mSwitch)
 
 statSec:AddSlider({
-    Name="WalkSpeed", Flag="ws", Min=0, Max=500, Default=16, Decimals=0,
-    Callback=function(v) pcall(function() local h=getHum(); if h then h.WalkSpeed=v end end) end,
+    Name = "WalkSpeed", Flag = "ws", Min = 0, Max = 500, Default = 16, Decimals = 0,
+    Callback = function(v) pcall(function() local h = getHum(); if h then h.WalkSpeed = v end end) end,
 })
 statSec:AddSlider({
-    Name="JumpPower", Flag="jp", Min=0, Max=500, Default=50, Decimals=0,
-    Callback=function(v) pcall(function() local h=getHum(); if h then h.JumpPower=v end end) end,
+    Name = "JumpPower", Flag = "jp", Min = 0, Max = 500, Default = 50, Decimals = 0,
+    Callback = function(v) pcall(function() local h = getHum(); if h then h.JumpPower = v end end) end,
 })
 
 local worldSec = UI.MakeSection(mR, "World")
 worldSec._tabName(mTab, mSwitch)
 
 worldSec:AddSlider({
-    Name="Gravity", Flag="grav", Min=0, Max=300, Default=196, Decimals=0,
-    Callback=function(v) pcall(function() workspace.Gravity=v end) end,
+    Name = "Gravity", Flag = "grav", Min = 0, Max = 300, Default = 196, Decimals = 0,
+    Callback = function(v) pcall(function() workspace.Gravity = v end) end,
 })
 worldSec:AddSlider({
-    Name="Field of View", Flag="fov", Min=30, Max=120, Default=70, Decimals=0,
-    Callback=function(v) pcall(function() workspace.CurrentCamera.FieldOfView=v end) end,
+    Name = "Field of View", Flag = "fov", Min = 30, Max = 120, Default = 70, Decimals = 0,
+    Callback = function(v) pcall(function() workspace.CurrentCamera.FieldOfView = v end) end,
 })
 
 worldSec:AddDivider()
 
 worldSec:AddToggle({
-    Name="Fullbright", Flag="fb", Default=false,
-    Keybind=Enum.KeyCode.B,
-    Callback=function(v)
+    Name = "Fullbright", Flag = "fb", Default = false,
+    Keybind = Enum.KeyCode.B,
+    Callback = function(v)
         local L = game:GetService("Lighting")
-        if v then L.Brightness=2; L.ClockTime=14; L.FogEnd=100000
-        else L.Brightness=1; L.ClockTime=14; L.FogEnd=100000 end
+        if v then L.Brightness = 2; L.FogEnd = 100000
+        else L.Brightness = 1; L.FogEnd = 100000 end
     end,
 })
 
@@ -199,33 +202,34 @@ worldSec:AddToggle({
 local uiSec = UI.MakeSection(sL, "UI")
 uiSec._tabName(sTab, sSwitch)
 
-uiSec:AddKeybind({ Name="Toggle UI", Flag="tkey", Default=Enum.KeyCode.RightShift })
-uiSec:AddCheckbox({ Name="Watermark",  Flag="wm",   Default=true, Callback=function(v) UI.wmFrame.Visible=v end })
-uiSec:AddCheckbox({ Name="Snow",       Flag="snow", Default=true, Callback=function(v) if v then UI.StartSnow() else UI.StopSnow() end end })
-uiSec:AddCheckbox({ Name="Overlay",    Flag="ov",   Default=true, Callback=function(v) UI.SetOverlay(v) end })
+-- Flag "tkey" auto-updates the toggle keybind
+uiSec:AddKeybind({ Name = "Toggle UI",  Flag = "tkey", Default = Enum.KeyCode.RightShift })
+uiSec:AddCheckbox({ Name = "Watermark", Flag = "wm",   Default = true,  Callback = function(v) UI.wmFrame.Visible = v end })
+-- StopSnow hides both snow particles and the dark overlay; StartSnow brings both back
+uiSec:AddCheckbox({ Name = "Snow",      Flag = "snow", Default = true,  Callback = function(v) if v then UI.StartSnow() else UI.StopSnow() end end })
+uiSec:AddCheckbox({ Name = "Overlay",   Flag = "ov",   Default = true,  Callback = function(v) UI.SetOverlay(v) end })
 
 local themeSec = UI.MakeSection(sR, "Theme")
 themeSec._tabName(sTab, sSwitch)
 
 themeSec:AddColorPicker({
-    Name="Accent Color", Flag="accent",
-    Default=Color3.fromRGB(255,182,215),
-    Callback=function(c) UI.SetAccent(c) end,
+    Name = "Accent Color", Flag = "accent",
+    Default = Color3.fromRGB(255, 182, 215),
+    Callback = function(c) UI.SetAccent(c) end,
 })
-
 themeSec:AddButton({
-    Name="Reset Accent",
-    Callback=function() UI.SetAccent(Color3.fromRGB(255,182,215)) end,
+    Name = "Reset Accent",
+    Callback = function() UI.SetAccent(Color3.fromRGB(255, 182, 215)) end,
 })
 
 local cfgSec = UI.MakeSection(sL, "Configs")
 cfgSec._tabName(sTab, sSwitch)
 
-local cfgBox = cfgSec:AddTextBox({ Name="Config Name", Flag="cfgname", Placeholder="e.g. default" })
-cfgSec:AddButton({ Name="Save",   Callback=function() local n=cfgBox:Get(); if n~="" then UI.SaveConfig(n);    UI.Notify("Config","Saved: "..n,    "Success",3) end end })
-cfgSec:AddButton({ Name="Load",   Callback=function() local n=cfgBox:Get(); if n~="" then UI.LoadConfig(n);    UI.Notify("Config","Loaded: "..n,   "Success",3) end end })
-cfgSec:AddButton({ Name="Delete", Callback=function() local n=cfgBox:Get(); if n~="" then UI.DeleteConfig(n); UI.Notify("Config","Deleted: "..n,  "Success",3) end end })
-cfgSec:AddButton({ Name="Set Autoload", Callback=function() local n=cfgBox:Get(); if n~="" then UI.SetAutoLoad(n); UI.Notify("Config","Autoload → "..n,"Success",3) end end })
+local cfgBox = cfgSec:AddTextBox({ Name = "Config Name", Flag = "cfgname", Placeholder = "e.g. default" })
+cfgSec:AddButton({ Name = "Save",        Callback = function() local n = cfgBox:Get(); if n ~= "" then UI.SaveConfig(n);    UI.Notify("Config", "Saved: "    .. n, "Success", 3) end end })
+cfgSec:AddButton({ Name = "Load",        Callback = function() local n = cfgBox:Get(); if n ~= "" then UI.LoadConfig(n);    UI.Notify("Config", "Loaded: "   .. n, "Success", 3) end end })
+cfgSec:AddButton({ Name = "Delete",      Callback = function() local n = cfgBox:Get(); if n ~= "" then UI.DeleteConfig(n); UI.Notify("Config", "Deleted: "  .. n, "Success", 3) end end })
+cfgSec:AddButton({ Name = "Set Autoload",Callback = function() local n = cfgBox:Get(); if n ~= "" then UI.SetAutoLoad(n);  UI.Notify("Config", "Autoload → " .. n, "Success", 3) end end })
 
 -- ── DONE ──────────────────────────────────────────
 UI.Notify("WhoaUI Demo", "All features loaded!", "Success", 4)
